@@ -1,0 +1,9 @@
+.git
+.gitignore
+.vscode
+.classpath
+.project
+examples
+target
+derby.log
+!target/jpaserver_derby_files

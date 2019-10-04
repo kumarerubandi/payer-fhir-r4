@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Fri Oct 04 09:56:05 IST 2019:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-016d-9504-8506-0000107f0068 
+on database directory /Users/kumarelubandi/WorkSpace/cqf-ruler-r4/target/jpaserver_derby_files_r4 with class loader WebAppClassLoader=47095269@2ce9de5 
+Loaded from file:/Users/kumarelubandi/.m2/repository/org/apache/derby/derby/10.14.2.0/derby-10.14.2.0.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.8.0_192-b12
+user.dir=/Users/kumarelubandi/WorkSpace/cqf-ruler-r4
+os.name=Mac OS X
+os.arch=x86_64
+os.version=10.14.5
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
