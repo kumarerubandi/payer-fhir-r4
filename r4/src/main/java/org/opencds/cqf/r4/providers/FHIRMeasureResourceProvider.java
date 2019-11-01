@@ -1,9 +1,11 @@
 package org.opencds.cqf.r4.providers;
 
 import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Iterator;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -20,7 +22,9 @@ import org.opencds.cqf.r4.evaluation.MeasureEvaluationSeed;
 import org.opencds.cqf.r4.helpers.LibraryHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
@@ -30,12 +34,14 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.RequiredParam;
+import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.TokenParamModifier;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import java.math.BigDecimal; 
 
 public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 
@@ -385,7 +391,101 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
         Measure measure = this.getDao().read(theId);
         return this.dataRequirementsProvider.getDataRequirements(measure, this.libraryResourceProvider);
     }
+    
+//    @Operation(name = "$calculate-score", idempotent = true)
+//    public  calculateScore(@IdParam IdType theId,@ResourceParam String theRawBody,
+//            @RequiredParam(name = "startPeriod") String startPeriod,
+//            @RequiredParam(name = "endPeriod") String endPeriod) throws InternalErrorException, FHIRException {
+//        
+//        Measure measure = this.getDao().read(theId);
+//        return 72;
+//    }
+    
+    
+    @Operation(name = "$calculate-score", idempotent = true)
+    public MeasureReport  calculateScore(@ResourceParam String theRawBody ) throws InternalErrorException, FHIRException {
+//        System.out.println("JSONN Body");
+//        System.out.println(theRawBody);
+    	
+    	MeasureReport resMeasureReport = new MeasureReport();
+        try {
+	        JSONObject inputJson = new JSONObject(theRawBody);
+	        Iterator<String> jsonKeys = inputJson.keys();
+	        double weightedScore = 0;
+	        
+	        while(jsonKeys.hasNext()) {
+	            String jsonKey = jsonKeys.next();
+	            if( !(jsonKey.equals("resourceType") || jsonKey.equals("savedToCloud"))) {
+	            	JSONObject jsonObj = new JSONObject(inputJson.getString(jsonKey));
+	            	double totalScore = 0;
+	            	
+		        	System.out.println("Key: "+jsonKey);
+		            System.out.println(jsonObj);
+		            if(jsonObj.has("measureList")) {
+		            	
+		            	JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
+//		            	System.out.println(measureList);
+		            	for(int i = 0; i < measureList.length(); i++)
+		            	{
+		            		  MeasureReport measureReport = new MeasureReport();
+		            	      JSONObject measureObj = measureList.getJSONObject(i);
+		            	      System.out.println("MEASUREE OBJBJJ");
+		            	      String measureIdStr = measureObj.getString("measureId");
+		            	      if(measureIdStr.equals("")) {
+		            	    	  System.out.println("---------------");
+		            	    	  continue;
+		            	      }
+		            	      IdType measureId = new IdType(measureIdStr);
+		            	      System.out.println(measureObj);
+		            	      measureReport= evaluateMeasure(measureId, "2018-06-19", "2019-09-25", null, null, null, null,
+		            	                null, null, null, null, null);
+		            	      
+//		            	      List<MeasureReportGroupComponent> groups = measureReport.getGroup();
+		            	      totalScore =  totalScore+ measureReport.getGroup().get(0).getMeasureScore().getValue().doubleValue();
+//		            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
+		            	      System.out.println("---------------");
+		            	      
 
+		            	}
+		            	double avgScore= totalScore;
+		            	jsonObj.put("totalScore",avgScore);
+			            switch(jsonKey) {
+			            	case "qualityImprovement":{
+			            		weightedScore = weightedScore  + avgScore * 0.45;
+			            		break;
+			            	}
+			            	case "promotingInteroperability":{
+			            		weightedScore = weightedScore + avgScore * 0.25;
+			            		break;
+			            	}
+			            	case "improvementActivity":
+			            	case "costMeasures":{
+			            		weightedScore = weightedScore + avgScore * 0.15;
+			            		break;
+			            	}
+			            
+			            }
+			            
+		            }
+		            
+		            
+	            }
+	            
+	        }
+	        MeasureReport.MeasureReportGroupComponent measureReportGroup = new MeasureReport.MeasureReportGroupComponent();
+	        measureReportGroup.setMeasureScore(new Quantity(weightedScore));
+	        resMeasureReport.addGroup(measureReportGroup);
+	        
+        }
+        catch(JSONException json_ex) {
+      	  json_ex.printStackTrace();
+        }
+        catch(Exception ex) {
+          ex.printStackTrace();
+        }
+        return resMeasureReport;
+    }
+    
     @Operation(name = "$submit-data", idempotent = true)
     public Resource submitData(RequestDetails details, @IdParam IdType theId,
             @OperationParam(name = "measure-report", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
