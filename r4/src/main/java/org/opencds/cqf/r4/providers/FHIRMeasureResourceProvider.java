@@ -419,35 +419,80 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 	            	JSONObject jsonObj = new JSONObject(inputJson.getString(jsonKey));
 	            	double totalScore = 0;
 	            	
-		        	System.out.println("Key: "+jsonKey);
-		            System.out.println(jsonObj);
+//		        	System.out.println("Key: "+jsonKey);
+//		            System.out.println(jsonObj);
 		            if(jsonObj.has("measureList")) {
 		            	
 		            	JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
 //		            	System.out.println(measureList);
+		            	if(jsonKey == "qualityImprovement") {
+		            		if(measureList.length() < 6) {
+		            			throw new RuntimeException("Atleast 6 measures should be provided in qualityImprovement !!");
+		            		}
+		            	}
+		            	double bonusPoints = 0;
 		            	for(int i = 0; i < measureList.length(); i++)
 		            	{
 		            		  MeasureReport measureReport = new MeasureReport();
 		            	      JSONObject measureObj = measureList.getJSONObject(i);
-		            	      System.out.println("MEASUREE OBJBJJ");
+//		            	      System.out.println("MEASUREE OBJBJJ");
 		            	      String measureIdStr = measureObj.getString("measureId");
 		            	      if(measureIdStr.equals("")) {
 		            	    	  System.out.println("---------------");
 		            	    	  continue;
 		            	      }
 		            	      IdType measureId = new IdType(measureIdStr);
-		            	      System.out.println(measureObj);
-		            	      measureReport= evaluateMeasure(measureId, "2018-06-19", "2019-09-25", null, null, null, null,
+//		            	      System.out.println(measureObj);
+		            	      Measure measure = this.getDao().read(measureId);
+		            	      measureReport= evaluateMeasure(measureId, "2018-06-19", "2020-09-25", null, null, null, null,
 		            	                null, null, null, null, null);
 		            	      
 //		            	      List<MeasureReportGroupComponent> groups = measureReport.getGroup();
-		            	      totalScore =  totalScore+ measureReport.getGroup().get(0).getMeasureScore().getValue().doubleValue();
-//		            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
-		            	      System.out.println("---------------");
+		            	      double measureScore= measureReport.getGroup().get(0).getMeasureScore().getValue().doubleValue();
+		            	      double maxPoints = 10 ; 
+		            	      String measureName =  measure.getName();
+		            	      System.out.println("MEASURE NAME: " +measureName);
+		            	      boolean priority = true ;
+		            	      if(jsonKey == "qualityImprovement" && priority) {
+		            	    	  bonusPoints = bonusPoints + 5 ; 
+		            	      }
 		            	      
-
+		            	      switch(measureName) {
+		            	      	case "Verify Opioid Treatment Agreement":
+		            	      	case "Query of the Prescription Drug Monitoring Program (PDMP)":{
+		            	      		bonusPoints = bonusPoints + 5 ; 
+		            	      		break;
+		            	      	}
+		            	      	case "Support Electronic Referral Loops By Receiving and Incorporating Health Information Exclusion":
+		            	      	case "Support Electronic Referral Loops By Sending Health Information":{
+		            	      		maxPoints = 20 ; 
+		            	      		break;
+		            	      	}
+		            	      	case "Provide Patients Electronic Access to Their Health Information":{
+		            	      		maxPoints = 40 ; 
+		            	      		break;
+		            	      	}
+		            	      	case "Security Risk Analysis":{
+		            	      		maxPoints = 0 ; 
+		            	      		break;
+		            	      	}
+		            	      
+		            	      }
+		            	      
+		            	      //System.out.println("Measure Score: "+measureScore.toString());
+		            	      measureScore = measureScore*10 ; 
+		            	      if(measureScore > maxPoints) {
+		            	    	  measureScore = maxPoints ; 
+		            	      }
+		            	      totalScore =  totalScore+ measureScore;
+//		            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
+//		            	      System.out.println("---------------");
 		            	}
-		            	double avgScore= totalScore;
+		            	double avgScore = totalScore;
+		            	if(totalScore > 100) {
+		            		avgScore = totalScore;
+		            	} 
+		            	avgScore = avgScore+bonusPoints;
 		            	jsonObj.put("totalScore",avgScore);
 			            switch(jsonKey) {
 			            	case "qualityImprovement":{
