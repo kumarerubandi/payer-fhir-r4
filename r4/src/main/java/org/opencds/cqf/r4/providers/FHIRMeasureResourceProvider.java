@@ -466,7 +466,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		            	      
 		            	      */
 		            	      //{4967,5772,10381,10384,10386}
-		            	      int[] msrArray = new int[] {4967,4967,4967,4967,4967};
+		            	      int[] msrArray = new int[] {4967,5772,10381,10384,10386};
 		            	      IdType measureId = new IdType(getRandom(msrArray)+"");
 		            	      
 		            	      Measure measure = this.getDao().read(measureId);
