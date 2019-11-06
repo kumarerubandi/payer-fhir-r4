@@ -477,7 +477,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //		            	      List<MeasureReportGroupComponent> groups = measureReport.getGroup();
 		            	      double measureScore= measureReport.getGroup().get(0).getMeasureScore().getValue().doubleValue();
 		            	      double maxPoints = 10 ; 
-		            	      String measureName =  measure.getName();
+		            	      String measureName =  measureObj.getString("measureName");
 		            	      System.out.println("MEASURE NAME: " +measureName);
 		            	      
 		            	      if(jsonKey.equals("qualityImprovement")) {
