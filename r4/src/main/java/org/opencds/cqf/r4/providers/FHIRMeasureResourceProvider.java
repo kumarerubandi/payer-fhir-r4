@@ -480,7 +480,8 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		            	      String measureName =  measureObj.getString("measureName");
 		            	      System.out.println("MEASURE NAME: " +measureName);
 		            	      
-		            	      if(jsonKey.equals("qualityImprovement")) {
+		            	      if(jsonKey.equals("qualityImprovement") && measureObj.has("highPriority")) {
+		            	    	  
 		            	    	  boolean priority = measureObj.getBoolean("highPriority") ;
 		            	    	  if(priority) {
 			            	    	  bonusPoints = bonusPoints + 5 ; 
