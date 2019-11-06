@@ -8,8 +8,9 @@ import java.util.Map;
 import java.util.Iterator;
 
 import javax.servlet.http.HttpServletRequest;
-
+import java.util.Random;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -30,6 +31,7 @@ import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
 import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
@@ -42,6 +44,7 @@ import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.TokenParamModifier;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.math.BigDecimal; 
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
 
 public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 
@@ -400,7 +403,11 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //        Measure measure = this.getDao().read(theId);
 //        return 72;
 //    }
-    
+    public static int getRandom(int[] array) {
+        int rnd = new Random().nextInt(array.length);
+        System.out.println("RANNNNDDd"+rnd);
+        return array[rnd];
+    }
     
     @Operation(name = "$calculate-score", idempotent = true)
     public MeasureReport  calculateScore(@ResourceParam String theRawBody ) throws InternalErrorException, FHIRException {
@@ -408,42 +415,62 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //        System.out.println(theRawBody);
     	
     	MeasureReport resMeasureReport = new MeasureReport();
+    	String errMsg = "";
         try {
 	        JSONObject inputJson = new JSONObject(theRawBody);
 	        Iterator<String> jsonKeys = inputJson.keys();
 	        double weightedScore = 0;
-	        
+//	        Parameters parameters = new Parameters();
 	        while(jsonKeys.hasNext()) {
+	        	System.out.println("===========================");
 	            String jsonKey = jsonKeys.next();
 	            if( !(jsonKey.equals("resourceType") || jsonKey.equals("savedToCloud"))) {
 	            	JSONObject jsonObj = new JSONObject(inputJson.getString(jsonKey));
 	            	double totalScore = 0;
-	            	
-//		        	System.out.println("Key: "+jsonKey);
+		        	System.out.println("Key: "+jsonKey);
 //		            System.out.println(jsonObj);
 		            if(jsonObj.has("measureList")) {
 		            	
 		            	JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
 //		            	System.out.println(measureList);
-		            	if(jsonKey == "qualityImprovement") {
+		            	if(jsonKey.equals("qualityImprovement")) {
 		            		if(measureList.length() < 6) {
-		            			throw new RuntimeException("Atleast 6 measures should be provided in qualityImprovement !!");
+		            			throw new RuntimeException("minimum 6 measures !!");
 		            		}
 		            	}
 		            	double bonusPoints = 0;
 		            	for(int i = 0; i < measureList.length(); i++)
 		            	{
+		            		  System.out.println("--------------------------");
 		            		  MeasureReport measureReport = new MeasureReport();
 		            	      JSONObject measureObj = measureList.getJSONObject(i);
 //		            	      System.out.println("MEASUREE OBJBJJ");
 		            	      String measureIdStr = measureObj.getString("measureId");
 		            	      if(measureIdStr.equals("")) {
-		            	    	  System.out.println("---------------");
+//		            	    	  System.out.println("---------------");
 		            	    	  continue;
 		            	      }
-		            	      IdType measureId = new IdType(measureIdStr);
-//		            	      System.out.println(measureObj);
+		            	      System.out.println(measureIdStr +" measureObj");
+		            	     /**
+		            	      SearchParameterMap paramMap = new SearchParameterMap();
+		            	      paramMap.add("identifier", new ReferenceParam(measureIdStr));
+		            	      IBundleProvider measureBundle=this.getDao().search(paramMap);
+		            	      if(measureBundle.size() == 0) {
+		            	    	  System.out.println("MEASURE With given identifier not found");
+		            	      }
+		            	      List<IBaseResource> matchedMeasures= measureBundle.getResources(0,measureBundle.size());
+		            	      System.out.println("MEASUREE Id"+matchedMeasures.toString());
+		            	      IdType measureId = new IdType(matchedMeasures.get(0).getIdElement().getIdPart());
 		            	      Measure measure = this.getDao().read(measureId);
+//		            	      pids = 
+		            	      
+		            	      */
+		            	      //{4967,5772,10381,10384,10386}
+		            	      int[] msrArray = new int[] {4967,4967,4967,4967,4967};
+		            	      IdType measureId = new IdType(getRandom(msrArray)+"");
+		            	      
+		            	      Measure measure = this.getDao().read(measureId);
+		            	      System.out.println("random Msr ID "+ measure.getIdElement().getIdPart());
 		            	      measureReport= evaluateMeasure(measureId, "2018-06-19", "2020-09-25", null, null, null, null,
 		            	                null, null, null, null, null);
 		            	      
@@ -452,28 +479,36 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		            	      double maxPoints = 10 ; 
 		            	      String measureName =  measure.getName();
 		            	      System.out.println("MEASURE NAME: " +measureName);
-		            	      boolean priority = true ;
-		            	      if(jsonKey == "qualityImprovement" && priority) {
-		            	    	  bonusPoints = bonusPoints + 5 ; 
+		            	      
+		            	      if(jsonKey.equals("qualityImprovement")) {
+		            	    	  boolean priority = measureObj.getBoolean("highPriority") ;
+		            	    	  if(priority) {
+			            	    	  bonusPoints = bonusPoints + 5 ; 
+			            	    	  System.out.println("Priority: " + priority);
+		            	    	  }
 		            	      }
 		            	      
 		            	      switch(measureName) {
 		            	      	case "Verify Opioid Treatment Agreement":
 		            	      	case "Query of the Prescription Drug Monitoring Program (PDMP)":{
 		            	      		bonusPoints = bonusPoints + 5 ; 
+		            	      		System.out.println("+5 Bonus for Measure : " +measureName);
 		            	      		break;
 		            	      	}
 		            	      	case "Support Electronic Referral Loops By Receiving and Incorporating Health Information Exclusion":
 		            	      	case "Support Electronic Referral Loops By Sending Health Information":{
 		            	      		maxPoints = 20 ; 
+		            	      		System.out.println("MAx Points 20 for measure : " +measureName);
 		            	      		break;
 		            	      	}
 		            	      	case "Provide Patients Electronic Access to Their Health Information":{
 		            	      		maxPoints = 40 ; 
+		            	      		System.out.println("MAx Points 40 for measure : " +measureName);
 		            	      		break;
 		            	      	}
 		            	      	case "Security Risk Analysis":{
 		            	      		maxPoints = 0 ; 
+		            	      		System.out.println("MAx Points 0 for measure : " +measureName);
 		            	      		break;
 		            	      	}
 		            	      
@@ -489,10 +524,15 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //		            	      System.out.println("---------------");
 		            	}
 		            	double avgScore = totalScore;
+		            	System.out.println("Total score before rounding : " +avgScore);
 		            	if(totalScore > 100) {
-		            		avgScore = totalScore;
+		            		avgScore = 100;
 		            	} 
+		            	System.out.println("Total score after rounding : " +avgScore);
 		            	avgScore = avgScore+bonusPoints;
+		            	System.out.println("Total bonus : " +bonusPoints);
+		            	System.out.println("Total score after bonus : " +avgScore);
+		            	
 		            	jsonObj.put("totalScore",avgScore);
 			            switch(jsonKey) {
 			            	case "qualityImprovement":{
@@ -523,11 +563,21 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 	        
         }
         catch(JSONException json_ex) {
+          errMsg = json_ex.getMessage();
       	  json_ex.printStackTrace();
         }
-        catch(Exception ex) {
-          ex.printStackTrace();
+        
+        catch(RuntimeException rex) {
+        	errMsg = rex.getMessage();
+        	throw new RuntimeException(errMsg);
         }
+        catch(Exception ex) {
+            errMsg = ex.getMessage();
+            ex.printStackTrace();
+          }
+//        if(!errMsg.equals("")) {
+//        	throw new RuntimeException(errMsg);
+//        }
         return resMeasureReport;
     }
     
