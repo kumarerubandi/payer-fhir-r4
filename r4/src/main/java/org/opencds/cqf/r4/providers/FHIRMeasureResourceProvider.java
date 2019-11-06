@@ -514,11 +514,12 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		            	      
 		            	      }
 		            	      
-		            	      //System.out.println("Measure Score: "+measureScore.toString());
+		            	      System.out.println("Measure Score: "+measureScore.toString());
 		            	      measureScore = measureScore*10 ; 
 		            	      if(measureScore > maxPoints) {
 		            	    	  measureScore = maxPoints ; 
 		            	      }
+		            	      System.out.println("Measure Score * 10 : "+measureScore.toString());
 		            	      totalScore =  totalScore+ measureScore;
 //		            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
 //		            	      System.out.println("---------------");
