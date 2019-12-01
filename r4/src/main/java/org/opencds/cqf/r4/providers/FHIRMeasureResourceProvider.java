@@ -437,6 +437,531 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		System.out.println("RANNNNDDd" + rnd);
 		return array[rnd];
 	}
+	
+	public double getMeasureScore(JSONObject measureObj) {
+		double measureScore = 0;
+		try {
+//			System.out.println("--------------------------");
+			MeasureReport measureReport = new MeasureReport();
+    	   
+			String measureIdStr = measureObj.getString("measureId");
+			System.out.println("---MEASUREE ID : "+ measureIdStr);
+			SearchParameterMap map = new SearchParameterMap();
+			map.add("identifier", new TokenParam(measureIdStr));
+			System.out.println(measureIdStr);
+			IBundleProvider measuresFound = this.getDao().search(map);
+			if(measuresFound.size() > 0) {
+				List<IBaseResource> matchedMeasures= measuresFound.getResources(0,measuresFound.size());
+				IdType measureId = new IdType(matchedMeasures.get(0).getIdElement().getIdPart());
+				
+				
+//				if (measureIdStr.equals("")) {
+//	//    	    	  System.out.println("---------------");
+//					continue;
+//				}
+				System.out.println(measureIdStr + " measureObj");
+				
+				// {4967,5772,10381,10384,10386}
+		
+				
+	//			int[] msrArray = new int[] { 4967, 5772 };
+//				IdType measureId = new IdType(measureIdStr);
+	
+				Measure measure = this.getDao().read(measureId);
+				System.out.println("random Msr ID " + measure.getIdElement().getIdPart());
+				measureReport = evaluateMeasure(measure.getIdElement(), "2018-06-19", "2020-09-25", null, null, null,
+						null, null, null, null, null, null);
+	
+	//    	      List<MeasureReportGroupComponent> groups = measureReport.getGroup();
+				measureScore = measureReport.getGroup().get(0).getMeasureScore().getValue()
+						.doubleValue();
+				return measureScore ;
+			}
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		return measureScore;
+	}
+	
+	public double getQIScore(JSONObject jsonObj,double weightage) throws RuntimeException {
+		double score = 0;
+		try {
+			System.out.println("-------IN QI--------");
+//			System.out.println(jsonObj);
+			String collectionType = "";
+			String  measureType= "";
+			String  practice= "";
+			String  reporting= "";
+			String  specialtyMeasureSet= "";
+			String  submissionType= "";
+			if(jsonObj.has("collectionType")) {
+				collectionType = jsonObj.getString("collectionType");
+			}
+			if(jsonObj.has("measureType")) {
+				measureType = jsonObj.getString("measureType");
+			}
+			if(jsonObj.has("practice")) {
+				practice = jsonObj.getString("practice");
+			}
+			if(jsonObj.has("reporting")) {
+				reporting = jsonObj.getString("reporting");
+			}
+			if(jsonObj.has("specialtyMeasureSet")) {
+				specialtyMeasureSet = jsonObj.getString("specialtyMeasureSet");
+			}
+			if(jsonObj.has("submissionType")) {
+				submissionType = jsonObj.getString("submissionType");
+			}
+//			if(jsonObj.has("weightage")) {
+//				weightage = jsonObj.getString("weightage");
+//			}
+			
+			if (jsonObj.has("measureList")) {
+				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
+				double maxScore = 60;
+				if(submissionType.equals("cms")) {
+					if(measureList.length() < 10) {
+						throw new RuntimeException("Minimum 10 measures are to be submitted for CMS Web type submission!!");
+					}
+					maxScore = 100;
+				}
+				else {
+					if(measureList.length() < 6) {
+						throw new RuntimeException("Minimum 6 measures are to be submitted!!");
+					}
+				}
+				boolean hasOutComeMeasure = false;
+				boolean hasHighPriorityMeasure = false;
+				boolean hasPatientExpMeasure = false;
+				double totalBonus = 0;
+				double totalScore = 0;
+				boolean updateMaxScore = false;
+				for(int i = 0; i < measureList.length(); i++) {
+					double measureBonus = 0;
+					JSONObject measureObj = measureList.getJSONObject(i);
+					if(measureObj.has("measuretype")) {
+						if(measureObj.getString("measuretype").equals("Outcome")){
+							if(hasOutComeMeasure) { // bonus will be added from 2nd Outcome measure,if exists
+								measureBonus = measureBonus+2;
+								System.out.println("measure bonus for Outcome +2: "+measureBonus);
+							}
+							hasOutComeMeasure = true;
+							
+						}
+						if(measureObj.getString("measuretype").equals("Patient Engagement Experience")){
+//							hasHighPriorityMeasure = true;
+							if(hasPatientExpMeasure) {
+								measureBonus = measureBonus+2;
+								System.out.println("measure bonus for hasPatientExpMeasure +2: "+measureBonus);
+							}
+							hasPatientExpMeasure = true;
+						}
+					}
+					if(measureObj.has("collectionType")) {
+						if(measureObj.getString("collectionType").equals("CAHPS for MIPS survey")) {
+							measureBonus = measureBonus+2;
+							System.out.println("measure bonus for CAHPS for MIPS survey +2: "+measureBonus);
+						}
+					}
+					if(measureObj.has("highPriority")) {
+						if(measureObj.getString("highPriority").equals("Yes")){					
+							if(hasHighPriorityMeasure) {
+								measureBonus = measureBonus+1;
+								System.out.println("measure bonus for highPriority +1: "+measureBonus);
+
+							}
+							hasHighPriorityMeasure = true;
+						}
+					}
+					
+					if(measureObj.has("measureData")) {
+						JSONObject measuredata = measureObj.getJSONObject("measureData");
+//						JSONObject dataBundle = measuredata.getJSONObject("dataBundle");
+						
+						JSONArray entryList = new JSONArray(measuredata.getString("entry"));
+						
+						int msrLength = entryList.length();
+//						msrLength = 21;
+						System.out.println("Size of Entry List: "+msrLength);
+						if( msrLength< 20) {
+							continue;
+						}
+						else if (entryList.length() >= 200 && practice == "large") {
+							updateMaxScore = true;
+						}
+					}
+					else {
+						System.out.println("No msrData");
+						continue;
+					}
+					
+					
+					double measureScore = getMeasureScore(measureObj);
+					double multiplier = 10;
+					double maxPoints = 7;
+					
+					//CAHS for MIPS
+					//60% Score
+					//
+					//
+					System.out.println("measure Score bfore multiplication: "+measureScore);
+					measureScore =measureScore*multiplier ;
+					if (measureScore > maxPoints) {
+						measureScore = maxPoints;
+					}
+					System.out.println("measure Score after multiplication: "+measureScore);
+
+					System.out.println("measure bonux : "+maxScore+" , "+measureBonus);
+					totalBonus = totalBonus + measureBonus;
+					totalScore = totalScore + measureScore;
+					
+				}
+				if(updateMaxScore) {
+					maxScore = maxScore+10;
+				}
+				System.out.println("max Score and bonux : "+maxScore+" , "+totalBonus);
+				if(practice.equals("small")) {
+					totalBonus = totalBonus +2;
+				}
+				
+				if(totalBonus > maxScore*0.10) {
+					totalBonus =  maxScore*0.10;
+				}
+				System.out.println("Updated bonux :  "+totalBonus);
+				System.out.println("QI Score before rounding  : "+totalScore);
+				if(totalScore > maxScore) {
+					totalScore = maxScore;
+				}
+				score = totalScore * weightage;
+				
+				System.out.println("QI Score  : "+score);
+			}
+			
+			
+		}
+		catch(RuntimeException rex) {
+			rex.printStackTrace();
+			throw rex;
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+			
+		}
+			
+	
+
+		return score;
+	}
+	public  JSONObject getPIScore(JSONObject jsonObj) {
+		JSONObject response = new JSONObject();
+		double score = 0;
+		try {
+			boolean q1 = false;
+			boolean q2= false;
+			boolean q3= false;
+			boolean q4= false;
+			boolean q5= false;
+			boolean q6= false;
+			boolean q7= false;
+			boolean q8= false;
+			if(jsonObj.has("q1")) {
+				q1 = (boolean) jsonObj.get("q1");
+			}
+			if(jsonObj.has("q2")) {
+				q2 = (boolean) jsonObj.get("q2");
+			}
+			if(jsonObj.has("q3")) {
+				q3 = (boolean) jsonObj.get("q3");
+			}
+			if(jsonObj.has("q4")) {
+				q4 = (boolean) jsonObj.get("q4");
+			}
+			if(jsonObj.has("q5")) {
+				q5 = (boolean) jsonObj.get("q5");
+			}
+			if(jsonObj.has("q6")) {
+				q6 = (boolean) jsonObj.get("q6");
+			}
+			if(jsonObj.has("q7")) {
+				q7 = (boolean) jsonObj.get("q7");
+			}
+			if(jsonObj.has("q8")) {
+				q8 = (boolean) jsonObj.get("q8");
+			}
+			if(q1 || q2 || q3 || q4 || q5 || q6 || q7 || q8) {
+				response.put("score",0);
+				response.put("addWeightToQI",true);
+				return response;
+			}
+			
+			if (jsonObj.has("measureList")) {
+				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
+				double totalScore = 0;
+				List<JSONObject> EPMeasures =new ArrayList<JSONObject>(); 
+				List<JSONObject> HIEMeasures=new ArrayList<JSONObject>(); 
+				List<JSONObject> PTPMeasures=new ArrayList<JSONObject>(); 
+				List<JSONObject> PHDEMeasures=new ArrayList<JSONObject>();
+				for (int i = 0; i < measureList.length(); i++) {
+					JSONObject measureObj = measureList.getJSONObject(i);
+					String measureObjective = measureObj.getString("measureObjective");
+					switch(measureObjective) {
+						case "Electronic Prescribing":{
+							EPMeasures.add(measureObj);
+							break;
+						}
+						case "Health Information Exchange":{
+							HIEMeasures.add(measureObj);
+							break;
+						}
+						case "Provider To Patient Exchange":{
+							PTPMeasures.add(measureObj);
+							break;
+						}
+						case "Public Health And Clinical Data Exchange":{
+							PHDEMeasures.add(measureObj);
+							break;
+						}
+					}
+					
+				}
+				double multiplier = 10;
+				double maxPoints = 10;
+				
+				int EPSize = EPMeasures.size();
+				for(int j=0;j<EPSize; j++) {
+					JSONObject measureObj =EPMeasures.get(j);
+					double measureScore = getMeasureScore(measureObj);
+					String measureIdStr =measureObj.getString("measureId");
+					
+					System.out.println("Measure Score : " + measureScore);
+					measureScore =measureScore*multiplier;
+					
+					
+					System.out.println("multiplier : " + multiplier );
+					System.out.println("Measure Score * multiplier : " + measureScore);
+//					measureIdStr = "PI_PHCDRR_5";
+					if(measureIdStr.equals("PI_PHCDRR_5") || measureIdStr.equals("PI_EP_2")) {
+						measureScore = measureScore+5;
+					}
+					if (measureScore > maxPoints) {
+						measureScore = maxPoints;
+					}
+					totalScore = totalScore + measureScore;
+					
+				}
+				int HIESize = HIEMeasures.size();
+				for(int j=0;j<HIESize; j++) {
+					JSONObject measureObj =HIEMeasures.get(j);
+					
+					if(HIESize == 1) {
+						multiplier = 40;
+						if(EPSize==0) {
+							multiplier = 50;
+						}
+					}
+					else if(HIESize == 2) {
+						if(EPSize==0) {
+							multiplier = 25;
+						}
+						else {
+							multiplier = 20;
+						}
+						
+					}
+					
+					double measureScore = getMeasureScore(measureObj);
+					System.out.println("Measure Score : " + measureScore);
+					measureScore =measureScore*multiplier;
+//					if (measureScore > maxPoints) {
+//						measureScore = maxPoints;
+//					}
+					System.out.println("multiplier : " + multiplier );
+					System.out.println("Measure Score * multiplier : " + measureScore);
+					totalScore = totalScore + measureScore;
+					
+				}
+				int PTPSize = PTPMeasures.size();
+				int PHDESize = PHDEMeasures.size();
+				System.out.println("PTPSize : " + PTPSize);
+				System.out.println("PHDESize : " + PHDESize);
+				for(int i=0;i<PTPSize; i++) {
+					JSONObject measureObj =PTPMeasures.get(i);
+					if(PTPSize == 1) {
+						multiplier = 40;
+						if(PHDESize == 0) {
+							multiplier = 50;
+						}
+						
+					}
+					double measureScore = getMeasureScore(measureObj);
+					measureScore =measureScore*multiplier;
+//					if (measureScore > maxPoints) {
+//						measureScore = maxPoints;
+//					}
+					
+					System.out.println("multiplier : " + multiplier );
+					System.out.println("Measure Score * multiplier : " + measureScore);
+					totalScore = totalScore + measureScore;	
+				}
+				for(int i=0;i<PHDESize; i++) {
+					JSONObject measureObj =PHDEMeasures.get(i);
+					if(PHDESize == 1) {
+						multiplier = 10;
+						
+					}
+					else if(PHDESize == 2) {
+						multiplier = 5;
+						
+					}
+					double measureScore = getMeasureScore(measureObj);
+					measureScore =measureScore*multiplier;
+//					if (measureScore > maxPoints) {
+//						measureScore = maxPoints;
+//					}
+					
+					System.out.println("multiplier : " + multiplier );
+					System.out.println("Measure Score * multiplier : " + measureScore);
+					totalScore = totalScore + measureScore;	
+				}
+				
+				
+				score =  totalScore * 0.25;
+				response.put("score",score);
+				response.put("addWeightToQI",false);
+				return response;
+			}
+			
+			
+		}
+		catch(JSONException ex){
+			ex.printStackTrace();
+		}
+		
+		return response;
+		
+	}
+	public double getIAScore(JSONObject jsonObj) {
+		double score = 0;
+		try {
+			boolean hpsa = false;
+			boolean tin= false;
+			boolean practice= false;
+			boolean npf= false;
+			boolean doublePoints= false;
+			if(jsonObj.has("hpsa")) {
+				hpsa = (boolean) jsonObj.get("hpsa");
+				
+			}
+			if(jsonObj.has("tin")) {
+				tin = (boolean) jsonObj.get("tin");
+			}
+			if(jsonObj.has("practice")) {
+				practice = (boolean) jsonObj.get("practice");
+			}
+			if(jsonObj.has("npf")) {
+				npf = (boolean) jsonObj.get("npf");
+				
+			}
+			if(hpsa || practice || npf) {
+				doublePoints=true;
+			}
+
+			if(tin) {
+				score = 15;
+				return score;
+			}
+			if (jsonObj.has("measureList")) {
+				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
+				double totalScore = 0;
+				for (int i = 0; i < measureList.length(); i++) {
+					JSONObject measureObj = measureList.getJSONObject(i);
+					double measureScore = getMeasureScore(measureObj);
+					double multiplier = 10;
+					double maxPoints = 40;
+					String measureWeight = measureObj.getString("measureweight");
+					String measureName = measureObj.getString("measureName");
+					System.out.println("MEASURE NAME: " + measureName);
+					System.out.println("Measure Score: " + measureScore);
+					if(measureWeight.equals("high")) {
+						multiplier = 20;
+					}
+					if(measureWeight.equals("medium")) {
+						multiplier = 10;
+					}
+					if(doublePoints) {
+						multiplier = multiplier*2;
+					}
+					measureScore = measureScore * multiplier;
+					if (measureScore > maxPoints) {
+						measureScore = maxPoints;
+					}
+					System.out.println("multiplier : " + multiplier + " && msrWght : "+measureWeight);
+					System.out.println("Measure Score * multiplier : " + measureScore);
+					totalScore = totalScore + measureScore;
+//            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
+//            	      System.out.println("---------------");
+				}
+				score =  totalScore * 0.15;
+				
+			}
+		}
+		catch(JSONException ex) {
+			ex.printStackTrace();
+		}
+		return score;
+		
+	}
+	
+	public double getCMScore(JSONObject jsonObj) {
+		System.out.println("-------IN CMS--------");
+		System.out.println(jsonObj);
+		double score = 0;
+		try {
+			if (jsonObj.has("measureList")) {
+				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
+				double totalScore = 0;
+				for (int i = 0; i < measureList.length(); i++) {
+					JSONObject measureObj = measureList.getJSONObject(i);
+					double measureScore = getMeasureScore(measureObj);
+					double multiplier = 10;
+					double maxPoints = 10;
+					String measureName = measureObj.getString("measureName");
+					System.out.println("MEASURE NAME: " + measureName);
+					System.out.println("Measure Score: " + measureScore);
+					
+					
+					measureScore = measureScore * multiplier;
+					if (measureScore > maxPoints) {
+						measureScore = maxPoints;
+					}
+					System.out.println("multiplier : " + multiplier );
+					System.out.println("Measure Score * multiplier : " + measureScore);
+					totalScore = totalScore + measureScore;
+//            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
+//            	      System.out.println("---------------");
+				}
+				
+				score =  totalScore * 0.15;
+				return score;
+			}
+		}
+		catch (JSONException json_ex) {
+//			errMsg = json_ex.getMessage();
+			json_ex.printStackTrace();
+		}
+
+		catch (RuntimeException rex) {
+//			errMsg = rex.getMessage();
+			rex.printStackTrace();
+			throw rex;
+		} catch (Exception ex) {
+//			errMsg = ex.getMessage();
+			ex.printStackTrace();
+		}
+		return score;
+		
+	}
 
 	@Operation(name = "$calculate-score", idempotent = true)
 	public MeasureReport calculateScore(@ResourceParam String theRawBody) throws InternalErrorException, FHIRException {
@@ -450,11 +975,83 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			Iterator<String> jsonKeys = inputJson.keys();
 			double weightedScore = 0;
 //	        Parameters parameters = new Parameters();
+			double sum = 0;
+//			JSONObject jsonObj = new JSONObject();
+			JSONObject PIResponse = new JSONObject();
+			boolean updateQIWeightFromPI = false;
+			if(inputJson.has("promotingInteroperability")) {
+				System.out.println("-------PI START--------");
+				JSONObject PIObj= new JSONObject(inputJson.getString("promotingInteroperability"));
+				PIResponse = getPIScore(PIObj);
+				if(PIResponse.getBoolean("addWeightToQI")) {
+					updateQIWeightFromPI = true;
+				}
+				sum = sum+PIResponse.getDouble("score");
+			}
+			if(inputJson.has("improvementActivity")) {
+				System.out.println("-------IA START--------");
+				JSONObject IAObj= new JSONObject(inputJson.getString("improvementActivity"));
+				double IAResponse = getIAScore(IAObj);
+				sum = sum+IAResponse;
+			}
+			if(inputJson.has("costMeasures")) {
+				System.out.println("-------CM START--------");
+				JSONObject CMObj= new JSONObject(inputJson.getString("costMeasures"));
+				double CMSResponse = getCMScore(CMObj);
+				sum = sum+CMSResponse;
+			}
+			if(inputJson.has("qualityImprovement")) {
+				System.out.println("-------QI START--------");
+				JSONObject QIObj= new JSONObject(inputJson.getString("qualityImprovement"));
+				double weightage = 0.45;
+				
+				if(updateQIWeightFromPI) {
+					weightage = weightage+ 0.25;
+				}
+				double QIResponse = getQIScore(QIObj,weightage);
+				sum = sum+QIResponse;
+			}
+			
+			
+			/*
 			while (jsonKeys.hasNext()) {
 				System.out.println("===========================");
 				String jsonKey = jsonKeys.next();
-				if (!(jsonKey.equals("resourceType") || jsonKey.equals("savedToCloud"))) {
-					JSONObject jsonObj = new JSONObject(inputJson.getString(jsonKey));
+//				if (!(jsonKey.equals("resourceType") || jsonKey.equals("savedToCloud"))) {
+					
+					
+				JSONObject jsonObj = new JSONObject(inputJson.getString(jsonKey));
+				
+//					if (jsonKey.equals("qualityImprovement")) {
+//						
+//						
+//					}
+//					else if
+				
+				switch(jsonKey) {
+					case "qualityImprovement":{
+						sum = sum+getQIScore(jsonObj);
+						break;
+					}
+					case "promotingInteroperability":{
+						sum = sum+getPIScore(jsonObj).getDouble("score");
+						break;
+					}
+					case "improvementActivity":{
+						sum = sum+getIAScore(jsonObj);
+						break;
+					}
+					case "costMeasures":{
+						sum = sum+getCMScore(jsonObj);
+						break;
+					}
+						
+					
+				}
+				
+				System.out.println(jsonKey+"-- Sum: " + sum);
+				*/
+					/*////////////////////////////
 					double totalScore = 0;
 					System.out.println("Key: " + jsonKey);
 //		            System.out.println(jsonObj);
@@ -479,19 +1076,10 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 								continue;
 							}
 							System.out.println(measureIdStr + " measureObj");
-							/**
-							 * SearchParameterMap paramMap = new SearchParameterMap();
-							 * paramMap.add("identifier", new ReferenceParam(measureIdStr)); IBundleProvider
-							 * measureBundle=this.getDao().search(paramMap); if(measureBundle.size() == 0) {
-							 * System.out.println("MEASURE With given identifier not found"); }
-							 * List<IBaseResource> matchedMeasures=
-							 * measureBundle.getResources(0,measureBundle.size());
-							 * System.out.println("MEASUREE Id"+matchedMeasures.toString()); IdType
-							 * measureId = new IdType(matchedMeasures.get(0).getIdElement().getIdPart());
-							 * Measure measure = this.getDao().read(measureId); // pids =
-							 * 
-							 */
+							
 							// {4967,5772,10381,10384,10386}
+					
+						
 							int[] msrArray = new int[] { 4967, 5772, 10381, 10384, 10386 };
 							IdType measureId = new IdType(getRandom(msrArray) + "");
 
@@ -581,12 +1169,15 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						}
 
 					}
-
-				}
-
+////////////////////////////*/
+//				}
+				
+				
+/*
 			}
+			*/
 			MeasureReport.MeasureReportGroupComponent measureReportGroup = new MeasureReport.MeasureReportGroupComponent();
-			measureReportGroup.setMeasureScore(new Quantity(weightedScore));
+			measureReportGroup.setMeasureScore(new Quantity(sum));
 			resMeasureReport.addGroup(measureReportGroup);
 
 		} catch (JSONException json_ex) {
@@ -596,7 +1187,8 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 
 		catch (RuntimeException rex) {
 			errMsg = rex.getMessage();
-			throw new RuntimeException(errMsg);
+			rex.printStackTrace();
+			throw rex;
 		} catch (Exception ex) {
 			errMsg = ex.getMessage();
 			ex.printStackTrace();
@@ -607,6 +1199,51 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		return resMeasureReport;
 	}
 
+	@Operation(name = "$submit-data-bundle", idempotent = true)
+	public Bundle submitDataBundle(RequestDetails details, @IdParam IdType theId,
+			@OperationParam(name = "bundle", min = 1, max = 1, type =  Bundle.class) Bundle bundle
+			) {
+		System.out.println("Bundle");
+		Bundle transactionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
+		if (bundle != null) {
+		    final List<Bundle.BundleEntryComponent> entries = bundle.getEntry();
+		    System.out.println("entries");
+		    System.out.println(entries);
+		    for (Bundle.BundleEntryComponent entry : entries) {
+		      Resource resource = entry.getResource();
+		      System.out.println("ResType : "+ resource.getResourceType());
+		      if(resource.getResourceType().toString().equals("Parameters")) {
+		    	  System.out.println("Yes : ");
+		    	  MeasureReport report = new MeasureReport();
+		    	  List<IAnyResource> resources = new ArrayList<IAnyResource>();
+		    	  Parameters paramRes = (Parameters) resource ; 
+		    	  System.out.println("ParamsList");
+		    	  System.out.println(paramRes.getParameter());
+		    	  List<Parameters.ParametersParameterComponent> params = paramRes.getParameter();
+		    	  for(Parameters.ParametersParameterComponent param : params) {
+		    		  System.out.println(param.getName());
+		    		  
+		    		  if(param.getName().equals("measure-report")) {
+		    			  report = (MeasureReport) param.getResource();
+		    		  }
+		    		  else if(param.getName().equals("resource")) {
+		    			  resources.add(param.getResource());
+		    		  }
+		    		  
+		    	  }
+		    	  System.out.println(report);
+		    	  System.out.println(resources);
+		    	  Bundle submitDataRes = (Bundle) submitData(details,theId,report,resources);
+		    	  for (Bundle.BundleEntryComponent bundleEntry : submitDataRes.getEntry()) {
+					transactionBundle.addEntry(bundleEntry);
+				  }
+		      }
+		    }
+		  }
+		return transactionBundle;
+		
+	}
+	
 	@Operation(name = "$submit-data", idempotent = true)
 	public Resource submitData(RequestDetails details, @IdParam IdType theId,
 			@OperationParam(name = "measure-report", min = 1, max = 1, type = MeasureReport.class) MeasureReport report,
@@ -662,6 +1299,8 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 
 	private Bundle.BundleEntryComponent createTransactionEntry(Resource resource) {
 		Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(resource);
+		System.out.println("Resourece");
+		System.out.println(resource);
 		if (resource.hasId()) {
 			transactionEntry.setRequest(
 					new Bundle.BundleEntryRequestComponent().setMethod(Bundle.HTTPVerb.PUT).setUrl(resource.getId()));
