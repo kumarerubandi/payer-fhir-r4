@@ -30,6 +30,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.opencds.cqf.config.ClientAuthorizationInterceptor;
+//import ca.uhn.fhir.jpa.starter.CustomClaimTrigger;
+
 
 public class BaseServlet extends RestfulServer
 {
@@ -114,7 +116,8 @@ public class BaseServlet extends RestfulServer
          */
         ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx.getBean(ResponseHighlighterInterceptor.class);
         this.registerInterceptor(responseHighlighterInterceptor);
-        
+        CustomClaimTrigger customClaimProvider = new CustomClaimTrigger();
+        registerProvider(customClaimProvider);
         ClientAuthorizationInterceptor authInterceptor =  appCtx.getBean(ClientAuthorizationInterceptor.class);
         this.registerInterceptor(authInterceptor);
         /*
