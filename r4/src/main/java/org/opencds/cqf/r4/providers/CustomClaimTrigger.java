@@ -40,6 +40,9 @@ import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.ClaimResponse;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -143,6 +146,9 @@ public class CustomClaimTrigger implements IResourceProvider {
 		        	  //retVal.setProcessNote(theProcessNote);
 		        	  
 		          }
+		         
+		         
+		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
 //		          System.out.println("Output");
 //		          System.out.println(result);
 //		          
