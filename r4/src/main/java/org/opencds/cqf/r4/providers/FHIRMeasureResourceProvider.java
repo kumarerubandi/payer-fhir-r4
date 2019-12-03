@@ -528,7 +528,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				}
 				else {
 					if(measureList.length() < 6) {
-						throw new RuntimeException("Minimum 6 measures are to be submitted!!");
+						throw new RuntimeException("Minimum 6 measures are to be submitted from Quality Improvement category!!");
 					}
 				}
 				boolean hasOutComeMeasure = false;
@@ -564,8 +564,8 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 							System.out.println("measure bonus for CAHPS for MIPS survey +2: "+measureBonus);
 						}
 					}
-					if(measureObj.has("highPriority")) {
-						if(measureObj.getString("highPriority").equals("Yes")){					
+					if(measureObj.has("highpriority")) {
+						if(measureObj.getString("highpriority").equals("true")){					
 							if(hasHighPriorityMeasure) {
 								measureBonus = measureBonus+1;
 								System.out.println("measure bonus for highPriority +1: "+measureBonus);
@@ -575,8 +575,15 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						}
 					}
 					
-					if(measureObj.has("measureData")) {
-						JSONObject measuredata = measureObj.getJSONObject("measureData");
+					if(measureObj.has("data")) {
+						JSONObject measuredata = new JSONObject();
+						try{
+							measuredata = measureObj.getJSONObject("data");
+						}
+						catch (JSONException e) {
+							System.out.println("Not a valid JSON Data");
+        						continue;
+    						}
 //						JSONObject dataBundle = measuredata.getJSONObject("dataBundle");
 						
 						JSONArray entryList = new JSONArray(measuredata.getString("entry"));
@@ -689,6 +696,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			if(jsonObj.has("q8")) {
 				q8 = (boolean) jsonObj.get("q8");
 			}
+			response.put("addWeightToQI",false);
 			if(q1 || q2 || q3 || q4 || q5 || q6 || q7 || q8) {
 				response.put("score",0);
 				response.put("addWeightToQI",true);
@@ -704,7 +712,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				List<JSONObject> PHDEMeasures=new ArrayList<JSONObject>();
 				for (int i = 0; i < measureList.length(); i++) {
 					JSONObject measureObj = measureList.getJSONObject(i);
-					String measureObjective = measureObj.getString("measureObjective");
+					String measureObjective = measureObj.getString("objectivename");
 					switch(measureObjective) {
 						case "Electronic Prescribing":{
 							EPMeasures.add(measureObj);
@@ -879,7 +887,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 					double measureScore = getMeasureScore(measureObj);
 					double multiplier = 10;
 					double maxPoints = 40;
-					String measureWeight = measureObj.getString("measureweight");
+					String measureWeight = measureObj.getString("activityWeight");
 					String measureName = measureObj.getString("measureName");
 					System.out.println("MEASURE NAME: " + measureName);
 					System.out.println("Measure Score: " + measureScore);
