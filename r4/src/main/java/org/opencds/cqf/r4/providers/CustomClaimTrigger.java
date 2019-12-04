@@ -52,7 +52,7 @@ import org.json.JSONObject;
 import org.json.JSONException;
 import java.util.List;
 import java.util.ArrayList;
-
+import java.util.Date;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import java.io.FileWriter;  
@@ -63,6 +63,8 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Reference;
 
 
 public class CustomClaimTrigger implements IResourceProvider {
@@ -97,7 +99,7 @@ public class CustomClaimTrigger implements IResourceProvider {
 			@OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle
 		){
 		ClaimResponse retVal = new ClaimResponse();
-		retVal.setId(new IdType("ClaimResponse", "3746", "1"));
+		retVal.setId(new IdType("ClaimResponse", "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
 //		ClaimResponse claimRes = new ClaimResponse();
 		
 		try {
@@ -116,9 +118,10 @@ public class CustomClaimTrigger implements IResourceProvider {
 		    	  org.json.simple.JSONObject fileObj = (org.json.simple.JSONObject)obj;
 //		    	  System.out.println("Claim JSON");
 //		    	  System.out.println(fileObj.toString());
+		    	  /*
 		    	  String jsonStr = fileObj.toString();
 		    	  StringBuilder sb = new StringBuilder();
-		    	  URL url = new URL("http://cdex.mettles.com:5000/xmlx12");
+		    	  URL url = new URL("http://localhost:5000/xmlx12");
 		    	  byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 		    	  HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 			      conn.setRequestMethod("POST");
@@ -146,10 +149,82 @@ public class CustomClaimTrigger implements IResourceProvider {
 		        	  //retVal.setProcessNote(theProcessNote);
 		        	  
 		          }
-		         
-		         
+		           */
+		    	  String x12_generated ="\n" + 
+
+		    	  		"ISA*00*          *00*          *ZZ*00000AAA       *ZZ*06111          *040709*1439*U*00501*000484889*0*P*:~\n" + 
+		    	  		"GS*HI*0AAA*06111*20040709*1439*1*X*005010X217~\n" + 
+		    	  		"ST*278*300145997*005010X217~\n" + 
+		    	  		"BHT*0007*13*300145997*20040709*1439*RU~\n" + 
+		    	  		"HL*1**20*1~\n" + 
+		    	  		"NM1*X3*2*UHC*****PI*87726~\n" + 
+		    	  		"HL*2*1*21*1~\n" + 
+		    	  		"NM1*1P*1*MCcurdy*Michael****1932102951~\n" + 
+		    	  		"REF*EI*22~\n" + 
+		    	  		"N3*2353 Forestwood Dr*~\n" + 
+		    	  		"N4*Fremont*CA*94539~\n" + 
+		    	  		"PRV*AD*PXC*21345690~\n" + 
+		    	  		"HL*3*2*22*1~\n" + 
+		    	  		"NM1*IL*1*Alba*Alana*Olive~\n" + 
+		    	  		"REF*1D*1705555~\n" + 
+		    	  		"N4*NY*CA*1994~\n" + 
+		    	  		"DMG*D8*1978-04-10*female~\n" + 
+		    	  		"INS*Y*18~\n" + 
+		    	  		"HL*4*3*23*1~\n" + 
+		    	  		"NM1*QC*1*Abels*Sarah~\n" + 
+		    	  		"REF*SY*1705555~\n" + 
+		    	  		"N3*2222 Home Street~\n" + 
+		    	  		"N4*Belfast*OR*97005~\n" + 
+		    	  		"DMG*D8*19960321*female~\n" + 
+		    	  		"INS*N*01~\n" + 
+		    	  		"HL*5*4*24*1~\n" + 
+		    	  		"UM*IN*I*2***normal***Y~\n" + 
+		    	  		"REF*BB*456~\n" + 
+		    	  		"HI*ABF:E10.622:D8:12012017*ABF:T66.XXXA:D8:2212017*ABF:A42.9*ABF:A42.9*ABF:T70.3XXA*ABF:M86.9*ABF:E11.622*ABF:S78.112A*ABF:T80.0XXA*ABF:M86.9*ABF:E11.622*ABF:T66.XXXA~\n" + 
+		    	  		"HSD*HS*1*DA**21*4*A~\n" + 
+		    	  		"NM1*71*1*Doe*John*Dew~\n" + 
+		    	  		"REF*EI*21~\n" + 
+		    	  		"N3*Public Health Clinic*10666 Healthcare Dr.~\n" + 
+		    	  		"N4*Sacramento*CA*97099*~\n" + 
+		    	  		"PRV*AD*PXC*101Y00000X~\n" + 
+		    	  		"HL*6*5*25*0~\n" + 
+		    	  		"UM*HS*I~\n" + 
+		    	  		"REF*BB*456~\n" + 
+		    	  		"REF*NT*768~\n" + 
+		    	  		"DTP*472*RD8*23042011~\n" + 
+		    	  		"SV2*19*HC:15273:a6:e1:::Appendictomy:1B3*333*UN*4*234~\n" + 
+		    	  		"NM1*1P*1*MCcurdy*Michael****1932102951~\n" + 
+		    	  		"N3*2353 Forestwood Dr*~\n" + 
+		    	  		"N4*Fremont*CA*94539~\n" + 
+		    	  		"PER*IC**TE*(05) 5381 8146*TE*(05) 5381 8157~\n" + 
+		    	  		"NM1*P3*1*Doe*John****XX*1932102951~\n" + 
+		    	  		"SE*47*300145997~\n" + 
+		    	  		"GE*1*1~\n" + 
+		    	  		"IEA*1*000484889~";
+		    	  System.out.println("----------X12 Generated--------- \n");
+	        	  System.out.println(x12_generated);
+	        	  System.out.println("\n------------------- \n");
+		          CodeableConcept typeCodeableConcept = new CodeableConcept();
+		          Coding typeCoding = new Coding();
+		          typeCoding.setCode("professional");
+		          typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/claim-type");
+		          typeCoding.setDisplay("Professional");
+		          typeCodeableConcept.addCoding(typeCoding);
+		          Reference patientRef = new Reference("Patient/4342012");
+//		          Identifier patientIdentifier = new Identifier();
+//		          patientIdentifier.setValue("4342012");
+//		          patientRef.setIdentifier(patientIdentifier);
+		          retVal.setPatient(patientRef);
+		          retVal.setCreated(new Date());
+		          retVal.setType(typeCodeableConcept);
+		          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
+		          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
 		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-//		          System.out.println("Output");
+		          Reference reqRef = new Reference("http://cdex.mettles.com:8180/hapi-fhir-jpaserver/fhir/Claim?identifier=31e6e675-3ecd-4360-9e40-ec7d145fa96d&patient.identifier=10002704");
+		          retVal.setRequest(reqRef);
+		          retVal.setPreAuthRef("31e6e675-3ecd-4360-9e40-ec7d145fa96d");
+		          
+		          //		          System.out.println("Output");
 //		          System.out.println(result);
 //		          
 		        
