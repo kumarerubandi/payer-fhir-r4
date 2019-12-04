@@ -95,16 +95,27 @@ public class CustomClaimTrigger implements IResourceProvider {
 
 //	@Create
 	@Operation(name="$submit", idempotent=true)
-	public ClaimResponse claimSubmit(
+	public Bundle claimSubmit(
 			@OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle
 		){
 		ClaimResponse retVal = new ClaimResponse();
+		Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
 		retVal.setId(new IdType("ClaimResponse", "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
 //		ClaimResponse claimRes = new ClaimResponse();
 		
 		try {
 //			JSONObject reqJson = new JSONObject(theRawBody);
 //			System.out.println("\n Request  Body \n");
+			
+
+			/*
+			 * TODO - resource validation using $data-requirements operation (params are the
+			 * provided id and the measurement period from the MeasureReport)
+			 * 
+			 * TODO - profile validation ... not sure how that would work ... (get
+			 * StructureDefinition from URL or must it be stored in Ruler?)
+			 */
+			
 			
 //			System.out.println(bundle);
 			String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
@@ -223,7 +234,13 @@ public class CustomClaimTrigger implements IResourceProvider {
 		          Reference reqRef = new Reference("http://cdex.mettles.com:8180/hapi-fhir-jpaserver/fhir/Claim?identifier=31e6e675-3ecd-4360-9e40-ec7d145fa96d&patient.identifier=10002704");
 		          retVal.setRequest(reqRef);
 		          retVal.setPreAuthRef("31e6e675-3ecd-4360-9e40-ec7d145fa96d");
-		          
+		          Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(retVal);
+				  collectionBundle.addEntry(transactionEntry);
+
+				  for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+						collectionBundle.addEntry(entry);
+				   }
+				  return collectionBundle;
 		          //		          System.out.println("Output");
 //		          System.out.println(result);
 //		          
@@ -237,7 +254,7 @@ public class CustomClaimTrigger implements IResourceProvider {
 		catch(Exception ex) {
 			ex.printStackTrace();
 		}
-		return retVal;
+		return collectionBundle;
 	}
 
 
