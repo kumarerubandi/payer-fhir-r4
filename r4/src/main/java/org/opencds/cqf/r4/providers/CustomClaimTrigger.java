@@ -148,10 +148,14 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 			collectionBundle.addEntry(entry);
 			System.out.println("ResType : "+entry.getResource().getResourceType());
 			if(entry.getResource().getResourceType().toString().equals("Claim")){
-				Claim claim = (Claim) entry.getResource();
-				System.out.println("Identifier"+claim.getIdentifier());
-				claimIdentifier = ((Claim) entry.getResource()).getIdentifier().get(0).getValue();
-			
+				try {
+					Claim claim = (Claim) entry.getResource();
+					System.out.println("Identifier"+claim.getIdentifier());
+					claimIdentifier = ((Claim) entry.getResource()).getIdentifier().get(0).getValue();
+				}
+				catch(Exception e){
+					e.printStackTrace();
+				}
 			}
 			else if(entry.getResource().getResourceType().toString().equals("Patient")) {
 				try {
