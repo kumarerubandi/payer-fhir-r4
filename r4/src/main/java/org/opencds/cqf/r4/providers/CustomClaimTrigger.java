@@ -58,6 +58,7 @@ import com.google.gson.JsonObject;
 import org.json.JSONObject;
 import org.json.JSONException;
 import java.util.List;
+import java.util.Random;
 import java.util.ArrayList;
 import java.util.Date;
 import org.json.simple.parser.JSONParser;
@@ -112,7 +113,19 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		this.claimResponseProvider = claimResponseProvider ;
 		
 	}
+	
+	public String getSaltString() {
+	      String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+	      StringBuilder salt = new StringBuilder();
+	      Random rnd = new Random();
+	      while (salt.length() < 16) { // length of the random string.
+	          int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+	          salt.append(SALTCHARS.charAt(index));
+	      }
+	      String saltStr = salt.toString();
+	      return saltStr;
 
+	 }
 
 //	@Create
 	@Operation(name="$submit", idempotent=true)
@@ -269,21 +282,18 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 			          patientRef.setIdentifier(patientIdentifierObj);
 			          retVal.setPatient(patientRef);
 		          }
-		          else if(patientId.isEmpty()){
-		        	  patientRef.setId(patientId);
-		        	  retVal.setPatient(patientRef);
-		          }
+		          
 //		          
 		          retVal.setCreated(new Date());
 		          retVal.setType(typeCodeableConcept);
 		          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
 		          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
 		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
-		          Claim claim = (Claim)claimOutcome.getResource();
-		          Reference reqRef = new Reference(claim.getId());
+//		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
+//		          Claim claim = (Claim)claimOutcome.getResource();
+		          Reference reqRef = new Reference(createdBundle.getId());
 		          retVal.setRequest(reqRef);
-		          retVal.setPreAuthRef("31e6e675-3ecd-4360-9e40-ec7d145fa96d");
+		          retVal.setPreAuthRef(getSaltString());
 		          
 		          System.out.println("\n------------------- \n"+claimResponseProvider.getDao());
 		          DaoMethodOutcome claimResponseOutcome= claimResponseProvider.getDao().create(retVal);
