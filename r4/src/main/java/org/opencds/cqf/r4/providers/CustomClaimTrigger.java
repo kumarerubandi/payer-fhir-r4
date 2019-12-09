@@ -121,7 +121,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		) throws RuntimeException{
 		
 		ClaimResponse retVal = new ClaimResponse();
-		Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
+		Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
 //		retVal.setId(new IdType("ClaimResponse", "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
 //		ClaimResponse claimRes = new ClaimResponse();
 		Bundle responseBundle = new Bundle();
@@ -147,24 +147,11 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		}
 		
 		try {
-			createdBundle = (Bundle) systemDao.transaction(details, collectionBundle);
+			DaoMethodOutcome bundleOutcome= this.bundleProvider.getDao().create(collectionBundle);
+			createdBundle  = (Bundle) bundleOutcome.getResource();
+			
 			int i = 0;
-			for (Bundle.BundleEntryComponent entry :  createdBundle.getEntry()) {
-			  String[] urlStrings = entry.getResponse().getLocation().split("/");
-			  
-			  System.out.println("Entry::"+urlStrings[0]);
-			  if(urlStrings[0].equals("Claim")) {
-				  claimURL = entry.getResponse().getLocation();
-			  }
-			  else if(urlStrings[0].equals("Patient")) {
-				  patientId = urlStrings[1];
-			  }
-			  collectionBundle.getEntry().get(i).getResource().setId(new IdType(urlStrings[1]));
-//				  if(entry.getResource().getResourceType().equals("Claim")) {
-//					  this.getDao().create((Claim) entry.getResource());
-//				  }
-			  i++;
-			}
+
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -179,11 +166,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 			
 //			System.out.println(splitPath);
 			if(splitPath.length > 1) {
-//		    	  JSONParser parser = new JSONParser();
-//		    	  Object obj = parser.parse(new FileReader(splitPath[0]+"/src/main/java/org/opencds/cqf/r4/config/claim.json"));
-//		    	  org.json.simple.JSONObject fileObj = (org.json.simple.JSONObject)obj;
-//		    	  System.out.println("Claim JSON");
-//		    	  System.out.println(fileObj.toString());
+
 		    	  IParser jsonParser = details.getFhirContext().newJsonParser();
 		    	  String jsonStr =jsonParser.encodeResourceToString(bundle);
 		    	  System.out.println("JSON:\n"+jsonStr);
@@ -296,7 +279,9 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
 		          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
 		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-		          Reference reqRef = new Reference(claimURL);
+		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
+		          Claim claim = (Claim)claimOutcome.getResource();
+		          Reference reqRef = new Reference(claim.getId());
 		          retVal.setRequest(reqRef);
 		          retVal.setPreAuthRef("31e6e675-3ecd-4360-9e40-ec7d145fa96d");
 		          
@@ -311,9 +296,10 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 
 		          
 				  responseBundle.addEntry(transactionEntry);
-				  for (Bundle.BundleEntryComponent entry :  collectionBundle.getEntry()) {
+				  for (Bundle.BundleEntryComponent entry :  createdBundle.getEntry()) {
 					  responseBundle.addEntry(entry);
 				   }
+				  responseBundle.setId(createdBundle.getId());
 				  responseBundle.setType(Bundle.BundleType.COLLECTION);
 				  return responseBundle;
 		          //		          System.out.println("Output");

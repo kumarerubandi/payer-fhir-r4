@@ -127,7 +127,12 @@ public class BaseServlet extends RestfulServer
 //        register(bundleProvider, provider.getCollectionProviders());
 //        FHIRClaimResponseProvider claimResProvider = new FHIRClaimResponseProvider(provider, systemDao);
         registerProvider(claimResProvider);
+        
         CustomClaimTrigger customClaimProvider = new CustomClaimTrigger(provider, systemDao,claimResProvider);
+        ClaimResourceProvider jpaClaimProvider = (ClaimResourceProvider) provider.resolveResourceProvider("Claim");
+        customClaimProvider.setDao(jpaClaimProvider.getDao());
+        customClaimProvider.setContext(jpaClaimProvider.getContext());
+        
         registerProvider(customClaimProvider);
         
         ClientAuthorizationInterceptor authInterceptor =  appCtx.getBean(ClientAuthorizationInterceptor.class);
