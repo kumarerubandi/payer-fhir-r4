@@ -302,7 +302,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
 //		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
 //		          Claim claim = (Claim)claimOutcome.getResource();
-		          Reference reqRef = new Reference(createdBundle.getId());
+		          Reference reqRef = new Reference();
 		          if(!claimIdentifier.isEmpty()) {
 		        	  Identifier claimIdentifierObj = new Identifier();
 		        	  claimIdentifierObj.setValue(claimIdentifier);
