@@ -142,11 +142,18 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 		String claimURL = "";
 		String patientId = "";
 		String patientIdentifier = "";
-			
+		String claimIdentifier = "";
+		
 		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
 			collectionBundle.addEntry(entry);
 			System.out.println("ResType : "+entry.getResource().getResourceType());
-			if(entry.getResource().getResourceType().toString().equals("Patient")) {
+			if(entry.getResource().getResourceType().toString().equals("Claim")){
+				Claim claim = (Claim) entry.getResource();
+				System.out.println("Identifier"+claim.getIdentifier());
+				claimIdentifier = ((Claim) entry.getResource()).getIdentifier().get(0).getValue();
+			
+			}
+			else if(entry.getResource().getResourceType().toString().equals("Patient")) {
 				try {
 					System.out.println("000ResType : "+entry.getResource().getResourceType());
 					Patient patient = (Patient) entry.getResource();
@@ -292,6 +299,12 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 //		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
 //		          Claim claim = (Claim)claimOutcome.getResource();
 		          Reference reqRef = new Reference(createdBundle.getId());
+		          if(!claimIdentifier.isEmpty()) {
+		        	  Identifier claimIdentifierObj = new Identifier();
+		        	  claimIdentifierObj.setValue(claimIdentifier);
+		        	  reqRef.setIdentifier(claimIdentifierObj);
+		          }
+		          
 		          retVal.setRequest(reqRef);
 		          retVal.setPreAuthRef(getSaltString());
 		          
