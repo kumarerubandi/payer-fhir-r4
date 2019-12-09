@@ -116,8 +116,20 @@ public class BaseServlet extends RestfulServer
          */
         ResponseHighlighterInterceptor responseHighlighterInterceptor = appCtx.getBean(ResponseHighlighterInterceptor.class);
         this.registerInterceptor(responseHighlighterInterceptor);
-        CustomClaimTrigger customClaimProvider = new CustomClaimTrigger();
+        
+        FHIRClaimResponseProvider claimResProvider = new FHIRClaimResponseProvider(provider);
+        ClaimResponseResourceProvider jpaClaimResponseProvider = (ClaimResponseResourceProvider) provider.resolveResourceProvider("ClaimResponse");
+        claimResProvider.setDao(jpaClaimResponseProvider.getDao());
+        claimResProvider.setContext(jpaClaimResponseProvider.getContext());
+
+        
+
+//        register(bundleProvider, provider.getCollectionProviders());
+//        FHIRClaimResponseProvider claimResProvider = new FHIRClaimResponseProvider(provider, systemDao);
+        registerProvider(claimResProvider);
+        CustomClaimTrigger customClaimProvider = new CustomClaimTrigger(provider, systemDao,claimResProvider);
         registerProvider(customClaimProvider);
+        
         ClientAuthorizationInterceptor authInterceptor =  appCtx.getBean(ClientAuthorizationInterceptor.class);
         this.registerInterceptor(authInterceptor);
         /*

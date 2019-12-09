@@ -21,15 +21,22 @@ package org.opencds.cqf.r4.providers;
  */
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.dao.DaoMethodOutcome;
+import ca.uhn.fhir.jpa.dao.IFhirSystemDao;
+import ca.uhn.fhir.jpa.rp.r4.ClaimResourceProvider;
+import ca.uhn.fhir.jpa.rp.r4.MeasureResourceProvider;
 import ca.uhn.fhir.jpa.subscription.ISubscriptionTriggeringSvc;
 //import ca.uhn.fhir.jpa.model.util.JpaConstants;
 import ca.uhn.fhir.model.dstu2.valueset.ResourceTypeEnum;
+import ca.uhn.fhir.model.valueset.BundleEntrySearchModeEnum;
+import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.UriParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -65,17 +72,22 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
+//import ca.uhn.fhir.jpa.rp.r4.ClaimResponseResourceProvider;
 
 
-public class CustomClaimTrigger implements IResourceProvider {
+
+public class CustomClaimTrigger extends ClaimResourceProvider{
 //	public static final String RESOURCE_ID = "resourceId";
 //	public static final String SEARCH_URL = "searchUrl";
 	@Autowired
 	private FhirContext myFhirContext;
 //	@Autowired
 //	private ISubscriptionTriggeringSvc mySubscriptionTriggeringSvc;
-
-	
+	private JpaDataProvider provider;
+	private IFhirSystemDao systemDao;
+	FHIRBundleResourceProvider bundleProvider;
+	FHIRClaimResponseProvider claimResponseProvider;
 //	@Operation(name = JpaConstants.OPERATION_TRIGGER_SUBSCRIPTION)
 //	public IBaseParameters triggerSubscription(
 //		@OperationParam(name = RESOURCE_ID, min = 0, max = OperationParam.MAX_UNLIMITED) List<UriParam> theResourceIds,
@@ -92,47 +104,91 @@ public class CustomClaimTrigger implements IResourceProvider {
 //	) {
 //		return mySubscriptionTriggeringSvc.triggerSubscription(theResourceIds, theSearchUrls, theSubscriptionId);
 //	}
+	
+	public CustomClaimTrigger(JpaDataProvider dataProvider, IFhirSystemDao systemDao, FHIRClaimResponseProvider claimResponseProvider) {
+		this.provider = dataProvider;
+		this.systemDao = systemDao;
+		this.bundleProvider = (FHIRBundleResourceProvider) dataProvider.resolveResourceProvider("Bundle");
+		this.claimResponseProvider = claimResponseProvider ;
+		
+	}
+
 
 //	@Create
 	@Operation(name="$submit", idempotent=true)
-	public Bundle claimSubmit(
+	public Bundle claimSubmit(RequestDetails details,
 			@OperationParam(name = "claim", min = 1, max = 1, type = Bundle.class) Bundle bundle
-		){
+		) throws RuntimeException{
+		
 		ClaimResponse retVal = new ClaimResponse();
-		Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
-		retVal.setId(new IdType("ClaimResponse", "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
+		Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.TRANSACTION);
+//		retVal.setId(new IdType("ClaimResponse", "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
 //		ClaimResponse claimRes = new ClaimResponse();
+		Bundle responseBundle = new Bundle();
+		Bundle createdBundle = new Bundle();
+		String claimURL = "";
+		String patientId = "";
+		String patientIdentifier = "";
+			
+		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+			collectionBundle.addEntry(entry);
+			System.out.println("ResType : "+entry.getResource().getResourceType());
+			if(entry.getResource().getResourceType().toString().equals("Patient")) {
+				try {
+					System.out.println("000ResType : "+entry.getResource().getResourceType());
+					Patient patient = (Patient) entry.getResource();
+					System.out.println("Identifier"+patient.getIdentifier());
+					patientIdentifier = ((Patient) entry.getResource()).getIdentifier().get(0).getValue();
+				}
+				catch(Exception e){
+					e.printStackTrace();
+				}
+			}
+		}
 		
 		try {
-//			JSONObject reqJson = new JSONObject(theRawBody);
-//			System.out.println("\n Request  Body \n");
+			createdBundle = (Bundle) systemDao.transaction(details, collectionBundle);
+			int i = 0;
+			for (Bundle.BundleEntryComponent entry :  createdBundle.getEntry()) {
+			  String[] urlStrings = entry.getResponse().getLocation().split("/");
+			  
+			  System.out.println("Entry::"+urlStrings[0]);
+			  if(urlStrings[0].equals("Claim")) {
+				  claimURL = entry.getResponse().getLocation();
+			  }
+			  else if(urlStrings[0].equals("Patient")) {
+				  patientId = urlStrings[1];
+			  }
+			  collectionBundle.getEntry().get(i).getResource().setId(new IdType(urlStrings[1]));
+//				  if(entry.getResource().getResourceType().equals("Claim")) {
+//					  this.getDao().create((Claim) entry.getResource());
+//				  }
+			  i++;
+			}
+		}
+		catch(Exception e){
+			e.printStackTrace();
+			throw new RuntimeException(e.getLocalizedMessage());
+		}
 			
-
-			/*
-			 * TODO - resource validation using $data-requirements operation (params are the
-			 * provided id and the measurement period from the MeasureReport)
-			 * 
-			 * TODO - profile validation ... not sure how that would work ... (get
-			 * StructureDefinition from URL or must it be stored in Ruler?)
-			 */
-			
-			
-//			System.out.println(bundle);
+		try {
+				
 			String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
-//			System.out.println(basePathOfClass);
+//				System.out.println(basePathOfClass);
 			String[] splitPath = basePathOfClass.split("/target/classes");
+			
 //			System.out.println(splitPath);
 			if(splitPath.length > 1) {
-//		    	  File filesDirectory = new File(splitPath[0]+"src/main/jib/smartAppFhirArtifacts");
-		    	  JSONParser parser = new JSONParser();
-		    	  Object obj = parser.parse(new FileReader(splitPath[0]+"/src/main/java/org/opencds/cqf/r4/config/claim.json"));
-		    	  org.json.simple.JSONObject fileObj = (org.json.simple.JSONObject)obj;
+//		    	  JSONParser parser = new JSONParser();
+//		    	  Object obj = parser.parse(new FileReader(splitPath[0]+"/src/main/java/org/opencds/cqf/r4/config/claim.json"));
+//		    	  org.json.simple.JSONObject fileObj = (org.json.simple.JSONObject)obj;
 //		    	  System.out.println("Claim JSON");
 //		    	  System.out.println(fileObj.toString());
-		    	  /*
-		    	  String jsonStr = fileObj.toString();
+		    	  IParser jsonParser = details.getFhirContext().newJsonParser();
+		    	  String jsonStr =jsonParser.encodeResourceToString(bundle);
+		    	  System.out.println("JSON:\n"+jsonStr);
 		    	  StringBuilder sb = new StringBuilder();
-		    	  URL url = new URL("http://localhost:5000/xmlx12");
+		    	  URL url = new URL("http://cdex.mettles.com:5000/xmlx12");
 		    	  byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 		    	  HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 			      conn.setRequestMethod("POST");
@@ -147,20 +203,20 @@ public class CustomClaimTrigger implements IResourceProvider {
 		          }
 		          String result = sb.toString();
 		          JSONObject response = new JSONObject(result);
-		          
+		          System.out.print("JSON:"+response.toString());
 		          if(response.has("x12_response")) {
 		        	  String x12_generated = response.getString("x12_response");
 		        	  System.out.println("----------X12 Generated---------");
 		        	  System.out.println(x12_generated);
 		        	  
-		        	  ClaimResponse.NoteComponent note = new ClaimResponse.NoteComponent();
-		        	  note.setText(x12_generated.replace("\n", "").replace("\r", ""));
-		        	  List<ClaimResponse.NoteComponent> theProcessNote = new ArrayList<ClaimResponse.NoteComponent>();
-		        	  theProcessNote.add(note);
+//		        	  ClaimResponse.NoteComponent note = new ClaimResponse.NoteComponent();
+//		        	  note.setText(x12_generated.replace("\n", "").replace("\r", ""));
+//		        	  List<ClaimResponse.NoteComponent> theProcessNote = new ArrayList<ClaimResponse.NoteComponent>();
+//		        	  theProcessNote.add(note);
 		        	  //retVal.setProcessNote(theProcessNote);
 		        	  
 		          }
-		           */
+		           /*
 		    	  String x12_generated ="\n" + 
 
 		    	  		"ISA*00*          *00*          *ZZ*00000AAA       *ZZ*06111          *040709*1439*U*00501*000484889*0*P*:~\n" + 
@@ -212,8 +268,9 @@ public class CustomClaimTrigger implements IResourceProvider {
 		    	  		"SE*47*300145997~\n" + 
 		    	  		"GE*1*1~\n" + 
 		    	  		"IEA*1*000484889~";
+		    	  */
 		    	  System.out.println("----------X12 Generated--------- \n");
-	        	  System.out.println(x12_generated);
+//	        	  System.out.println(x12_generated);
 	        	  System.out.println("\n------------------- \n");
 		          CodeableConcept typeCodeableConcept = new CodeableConcept();
 		          Coding typeCoding = new Coding();
@@ -221,26 +278,44 @@ public class CustomClaimTrigger implements IResourceProvider {
 		          typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/claim-type");
 		          typeCoding.setDisplay("Professional");
 		          typeCodeableConcept.addCoding(typeCoding);
-		          Reference patientRef = new Reference("Patient/4342012");
-//		          Identifier patientIdentifier = new Identifier();
-//		          patientIdentifier.setValue("4342012");
-//		          patientRef.setIdentifier(patientIdentifier);
-		          retVal.setPatient(patientRef);
+		          Reference patientRef = new Reference();
+		         
+		          if(!patientIdentifier.isEmpty()) {
+		        	  Identifier patientIdentifierObj = new Identifier();
+		        	  patientIdentifierObj.setValue(patientIdentifier);
+			          patientRef.setIdentifier(patientIdentifierObj);
+			          retVal.setPatient(patientRef);
+		          }
+		          else if(patientId.isEmpty()){
+		        	  patientRef.setId(patientId);
+		        	  retVal.setPatient(patientRef);
+		          }
+//		          
 		          retVal.setCreated(new Date());
 		          retVal.setType(typeCodeableConcept);
 		          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
 		          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
 		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
-		          Reference reqRef = new Reference("http://cdex.mettles.com:8180/hapi-fhir-jpaserver/fhir/Claim?identifier=31e6e675-3ecd-4360-9e40-ec7d145fa96d&patient.identifier=10002704");
+		          Reference reqRef = new Reference(claimURL);
 		          retVal.setRequest(reqRef);
 		          retVal.setPreAuthRef("31e6e675-3ecd-4360-9e40-ec7d145fa96d");
-		          Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(retVal);
-				  collectionBundle.addEntry(transactionEntry);
+		          
+		          System.out.println("\n------------------- \n"+claimResponseProvider.getDao());
+		          DaoMethodOutcome claimResponseOutcome= claimResponseProvider.getDao().create(retVal);
+		          ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
+		          System.out.println("\n-----ClaimResss-------------- \n"+claimResponse.getId());
 
-				  for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-						collectionBundle.addEntry(entry);
+		          Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
+
+//		          collectionBundle.addEntry(transactionEntry);
+
+		          
+				  responseBundle.addEntry(transactionEntry);
+				  for (Bundle.BundleEntryComponent entry :  collectionBundle.getEntry()) {
+					  responseBundle.addEntry(entry);
 				   }
-				  return collectionBundle;
+				  responseBundle.setType(Bundle.BundleType.COLLECTION);
+				  return responseBundle;
 		          //		          System.out.println("Output");
 //		          System.out.println(result);
 //		          
@@ -256,7 +331,8 @@ public class CustomClaimTrigger implements IResourceProvider {
 		}
 		return collectionBundle;
 	}
-
+	
+	
 
 //	@Override
 //	public Class<? extends IBaseResource> getResourceType() {
