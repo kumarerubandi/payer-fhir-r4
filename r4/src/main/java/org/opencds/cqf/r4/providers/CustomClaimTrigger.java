@@ -184,157 +184,108 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 			
 		try {
 				
-			String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
+//			String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
 //				System.out.println(basePathOfClass);
-			String[] splitPath = basePathOfClass.split("/target/classes");
+//			String[] splitPath = basePathOfClass.split("/target/classes");
 			
 //			System.out.println(splitPath);
-			if(splitPath.length > 1) {
+//			if(splitPath.length > 1) {
 
-		    	  IParser jsonParser = details.getFhirContext().newJsonParser();
-		    	  String jsonStr =jsonParser.encodeResourceToString(bundle);
-		    	  System.out.println("JSON:\n"+jsonStr);
-		    	  StringBuilder sb = new StringBuilder();
-		    	  URL url = new URL("http://cdex.mettles.com:5000/xmlx12");
-		    	  byte[] postDataBytes = jsonStr.getBytes("UTF-8");
-		    	  HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-			      conn.setRequestMethod("POST");
-		          conn.setRequestProperty("Content-Type", "application/json");
-		          conn.setRequestProperty("Accept","application/json");
-		          conn.setDoOutput(true);
-		          conn.getOutputStream().write(postDataBytes);
-		          BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-		          String line =null;
-		          while((line=in.readLine())!= null){
-		            sb.append(line);
-		          }
-		          String result = sb.toString();
-		          JSONObject response = new JSONObject(result);
-		          System.out.print("JSON:"+response.toString());
-		          if(response.has("x12_response")) {
-		        	  String x12_generated = response.getString("x12_response");
-		        	  System.out.println("----------X12 Generated---------");
-		        	  System.out.println(x12_generated);
-		        	  
+	    	  IParser jsonParser = details.getFhirContext().newJsonParser();
+	    	  String jsonStr =jsonParser.encodeResourceToString(bundle);
+	    	  System.out.println("JSON:\n"+jsonStr);
+	    	  StringBuilder sb = new StringBuilder();
+	    	  URL url = new URL("http://cdex.mettles.com:5000/xmlx12");
+	    	  byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+	    	  HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+		      conn.setRequestMethod("POST");
+	          conn.setRequestProperty("Content-Type", "application/json");
+	          conn.setRequestProperty("Accept","application/json");
+	          conn.setDoOutput(true);
+	          conn.getOutputStream().write(postDataBytes);
+	          BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+	          String line =null;
+	          while((line=in.readLine())!= null){
+	            sb.append(line);
+	          }
+	          String result = sb.toString();
+	          JSONObject response = new JSONObject(result);
+	          System.out.print("JSON:"+response.toString());
+	          if(response.has("x12_response")) {
+	        	  String x12_generated = response.getString("x12_response");
+	        	  System.out.println("----------X12 Generated---------");
+	        	  System.out.println(x12_generated);
+	        	  
 //		        	  ClaimResponse.NoteComponent note = new ClaimResponse.NoteComponent();
 //		        	  note.setText(x12_generated.replace("\n", "").replace("\r", ""));
 //		        	  List<ClaimResponse.NoteComponent> theProcessNote = new ArrayList<ClaimResponse.NoteComponent>();
 //		        	  theProcessNote.add(note);
-		        	  //retVal.setProcessNote(theProcessNote);
-		        	  
-		          }
-		           /*
-		    	  String x12_generated ="\n" + 
-
-		    	  		"ISA*00*          *00*          *ZZ*00000AAA       *ZZ*06111          *040709*1439*U*00501*000484889*0*P*:~\n" + 
-		    	  		"GS*HI*0AAA*06111*20040709*1439*1*X*005010X217~\n" + 
-		    	  		"ST*278*300145997*005010X217~\n" + 
-		    	  		"BHT*0007*13*300145997*20040709*1439*RU~\n" + 
-		    	  		"HL*1**20*1~\n" + 
-		    	  		"NM1*X3*2*UHC*****PI*87726~\n" + 
-		    	  		"HL*2*1*21*1~\n" + 
-		    	  		"NM1*1P*1*MCcurdy*Michael****1932102951~\n" + 
-		    	  		"REF*EI*22~\n" + 
-		    	  		"N3*2353 Forestwood Dr*~\n" + 
-		    	  		"N4*Fremont*CA*94539~\n" + 
-		    	  		"PRV*AD*PXC*21345690~\n" + 
-		    	  		"HL*3*2*22*1~\n" + 
-		    	  		"NM1*IL*1*Alba*Alana*Olive~\n" + 
-		    	  		"REF*1D*1705555~\n" + 
-		    	  		"N4*NY*CA*1994~\n" + 
-		    	  		"DMG*D8*1978-04-10*female~\n" + 
-		    	  		"INS*Y*18~\n" + 
-		    	  		"HL*4*3*23*1~\n" + 
-		    	  		"NM1*QC*1*Abels*Sarah~\n" + 
-		    	  		"REF*SY*1705555~\n" + 
-		    	  		"N3*2222 Home Street~\n" + 
-		    	  		"N4*Belfast*OR*97005~\n" + 
-		    	  		"DMG*D8*19960321*female~\n" + 
-		    	  		"INS*N*01~\n" + 
-		    	  		"HL*5*4*24*1~\n" + 
-		    	  		"UM*IN*I*2***normal***Y~\n" + 
-		    	  		"REF*BB*456~\n" + 
-		    	  		"HI*ABF:E10.622:D8:12012017*ABF:T66.XXXA:D8:2212017*ABF:A42.9*ABF:A42.9*ABF:T70.3XXA*ABF:M86.9*ABF:E11.622*ABF:S78.112A*ABF:T80.0XXA*ABF:M86.9*ABF:E11.622*ABF:T66.XXXA~\n" + 
-		    	  		"HSD*HS*1*DA**21*4*A~\n" + 
-		    	  		"NM1*71*1*Doe*John*Dew~\n" + 
-		    	  		"REF*EI*21~\n" + 
-		    	  		"N3*Public Health Clinic*10666 Healthcare Dr.~\n" + 
-		    	  		"N4*Sacramento*CA*97099*~\n" + 
-		    	  		"PRV*AD*PXC*101Y00000X~\n" + 
-		    	  		"HL*6*5*25*0~\n" + 
-		    	  		"UM*HS*I~\n" + 
-		    	  		"REF*BB*456~\n" + 
-		    	  		"REF*NT*768~\n" + 
-		    	  		"DTP*472*RD8*23042011~\n" + 
-		    	  		"SV2*19*HC:15273:a6:e1:::Appendictomy:1B3*333*UN*4*234~\n" + 
-		    	  		"NM1*1P*1*MCcurdy*Michael****1932102951~\n" + 
-		    	  		"N3*2353 Forestwood Dr*~\n" + 
-		    	  		"N4*Fremont*CA*94539~\n" + 
-		    	  		"PER*IC**TE*(05) 5381 8146*TE*(05) 5381 8157~\n" + 
-		    	  		"NM1*P3*1*Doe*John****XX*1932102951~\n" + 
-		    	  		"SE*47*300145997~\n" + 
-		    	  		"GE*1*1~\n" + 
-		    	  		"IEA*1*000484889~";
-		    	  */
-		    	  System.out.println("----------X12 Generated--------- \n");
+	        	  //retVal.setProcessNote(theProcessNote);
+	        	  
+	          }
+			}
+		catch(Exception e){
+	  			e.printStackTrace();
+	  			throw new RuntimeException(e.getLocalizedMessage());
+		}
+		try {
+		           
+	    	  System.out.println("----------X12 Generated--------- \n");
 //	        	  System.out.println(x12_generated);
-	        	  System.out.println("\n------------------- \n");
-		          CodeableConcept typeCodeableConcept = new CodeableConcept();
-		          Coding typeCoding = new Coding();
-		          typeCoding.setCode("professional");
-		          typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/claim-type");
-		          typeCoding.setDisplay("Professional");
-		          typeCodeableConcept.addCoding(typeCoding);
-		          Reference patientRef = new Reference();
-		         
-		          if(!patientIdentifier.isEmpty()) {
-		        	  Identifier patientIdentifierObj = new Identifier();
-		        	  patientIdentifierObj.setValue(patientIdentifier);
-			          patientRef.setIdentifier(patientIdentifierObj);
-			          retVal.setPatient(patientRef);
-		          }
-		          
+        	  System.out.println("\n------------------- \n");
+	          CodeableConcept typeCodeableConcept = new CodeableConcept();
+	          Coding typeCoding = new Coding();
+	          typeCoding.setCode("professional");
+	          typeCoding.setSystem("http://terminology.hl7.org/CodeSystem/claim-type");
+	          typeCoding.setDisplay("Professional");
+	          typeCodeableConcept.addCoding(typeCoding);
+	          Reference patientRef = new Reference();
+	         
+	          if(!patientIdentifier.isEmpty()) {
+	        	  Identifier patientIdentifierObj = new Identifier();
+	        	  patientIdentifierObj.setValue(patientIdentifier);
+		          patientRef.setIdentifier(patientIdentifierObj);
+		          retVal.setPatient(patientRef);
+	          }
+	          
 //		          
-		          retVal.setCreated(new Date());
-		          retVal.setType(typeCodeableConcept);
-		          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
-		          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
-		          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
+	          retVal.setCreated(new Date());
+	          retVal.setType(typeCodeableConcept);
+	          retVal.setUse(ClaimResponse.Use.PREAUTHORIZATION);
+	          retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
+	          retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
 //		          DaoMethodOutcome claimOutcome = this.getDao().create((Claim) createdBundle.getEntryFirstRep().getResource());
 //		          Claim claim = (Claim)claimOutcome.getResource();
-		          Reference reqRef = new Reference();
-		          if(!claimIdentifier.isEmpty()) {
-		        	  Identifier claimIdentifierObj = new Identifier();
-		        	  claimIdentifierObj.setValue(claimIdentifier);
-		        	  reqRef.setIdentifier(claimIdentifierObj);
-		          }
-		          
-		          retVal.setRequest(reqRef);
-		          retVal.setPreAuthRef(getSaltString());
-		          
-		          System.out.println("\n------------------- \n"+claimResponseProvider.getDao());
-		          DaoMethodOutcome claimResponseOutcome= claimResponseProvider.getDao().create(retVal);
-		          ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
-		          System.out.println("\n-----ClaimResss-------------- \n"+claimResponse.getId());
+	          Reference reqRef = new Reference();
+	          if(!claimIdentifier.isEmpty()) {
+	        	  Identifier claimIdentifierObj = new Identifier();
+	        	  claimIdentifierObj.setValue(claimIdentifier);
+	        	  reqRef.setIdentifier(claimIdentifierObj);
+	          }
+	          
+	          retVal.setRequest(reqRef);
+	          retVal.setPreAuthRef(getSaltString());
+	          
+	          System.out.println("\n------------------- \n"+claimResponseProvider.getDao());
+	          DaoMethodOutcome claimResponseOutcome= claimResponseProvider.getDao().create(retVal);
+	          ClaimResponse claimResponse = (ClaimResponse) claimResponseOutcome.getResource();
+	          System.out.println("\n-----ClaimResss-------------- \n"+claimResponse.getId());
 
-		          Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
-
+	          Bundle.BundleEntryComponent transactionEntry = new Bundle.BundleEntryComponent().setResource(claimResponse);
 //		          collectionBundle.addEntry(transactionEntry);
-
-		          
-				  responseBundle.addEntry(transactionEntry);
-				  for (Bundle.BundleEntryComponent entry :  createdBundle.getEntry()) {
-					  responseBundle.addEntry(entry);
-				   }
-				  responseBundle.setId(createdBundle.getId());
-				  responseBundle.setType(Bundle.BundleType.COLLECTION);
-				  return responseBundle;
-		          //		          System.out.println("Output");
+			  responseBundle.addEntry(transactionEntry);
+			  for (Bundle.BundleEntryComponent entry :  createdBundle.getEntry()) {
+				  responseBundle.addEntry(entry);
+			   }
+			  responseBundle.setId(createdBundle.getId());
+			  responseBundle.setType(Bundle.BundleType.COLLECTION);
+			  return responseBundle;
+	          //		          System.out.println("Output");
 //		          System.out.println(result);
 //		          
-		        
-		    	  
-			}
+	        
+	    	  
+//			}
 //		   retVal.addName().addGiven(reqJson.get("name").toString());
 		   // Populate bundle with matching resources
 		   
