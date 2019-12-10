@@ -212,7 +212,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 	          JSONObject response = new JSONObject(result);
 	          System.out.print("JSON:"+response.toString());
 	          if(response.has("x12_response")) {
-	        	  String x12_generated = response.getString("x12_response");
+	        	  String x12_generated = response.getString("x12_response").replace("~", "~\n");
 	        	  System.out.println("----------X12 Generated---------");
 	        	  System.out.println(x12_generated);
 	        	  
