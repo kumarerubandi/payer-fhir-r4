@@ -226,7 +226,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider{
 			}
 		catch(Exception e){
 	  			e.printStackTrace();
-	  			throw new RuntimeException(e.getLocalizedMessage());
+	  			
 		}
 		try {
 		           
