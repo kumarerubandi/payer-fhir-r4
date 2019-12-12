@@ -598,6 +598,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			if (jsonObj.has("measureList")) {
 				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
 				double maxScore = 60;
+				/* TEMP COMMENT
 				if(submissionType.equals("cms")) {
 					if(measureList.length() < 10) {
 						throw new RuntimeException("Minimum 10 measures are to be submitted for CMS Web type submission!!");
@@ -609,6 +610,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						throw new RuntimeException("Minimum 6 measures are to be submitted from Quality Improvement category!!");
 					}
 				}
+				*/
 				boolean hasOutComeMeasure = false;
 				boolean hasHighPriorityMeasure = false;
 				boolean hasPatientExpMeasure = false;
@@ -682,7 +684,9 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 					}
 					else {
 						System.out.println("No msrData");
+						/* TEMP COMMENT
 						continue;
+						*/
 					}
 					
 					JSONObject scoreResponse = getMeasureScore(measureObj);
