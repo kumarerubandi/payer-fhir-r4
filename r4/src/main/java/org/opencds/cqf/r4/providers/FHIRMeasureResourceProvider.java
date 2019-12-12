@@ -450,7 +450,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		return randomNum;
 	}
 	
-	public JSONObject getMeasureScore(JSONObject measureObj) {
+	public JSONObject getMeasureScore(JSONObject measureObj,boolean fixedScore) {
 		double measureScore = 0;
 		JSONObject response = new JSONObject();
 		
@@ -494,6 +494,10 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 					int numerator = genRandomNum(1,5);
 					int denominatorExclusion = 0;
 					int denominatorException = 0;
+					if(fixedScore) {
+						denominator =5;
+						numerator = 5;
+					}
 					System.out.println("-->initialPopulation , numerator ,denominator "+initialPopulation +" " +numerator+ " "+ denominator);
 					for(MeasureReport.MeasureReportGroupPopulationComponent populationObj : group.getPopulation()) {
 						System.out.println("Population : "+populationObj.getCode().getCoding().get(0).getCode());
@@ -689,7 +693,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						*/
 					}
 					
-					JSONObject scoreResponse = getMeasureScore(measureObj);
+					JSONObject scoreResponse = getMeasureScore(measureObj,false);
 					System.out.println("scoreResponse "+scoreResponse);
 					if(scoreResponse.has("report")) {
 						addToReports((Resource) scoreResponse.get("report"),reports);
@@ -835,7 +839,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				int EPSize = EPMeasures.size();
 				for(int j=0;j<EPSize; j++) {
 					JSONObject measureObj =EPMeasures.get(j);
-					JSONObject scoreResponse = getMeasureScore(measureObj);
+					JSONObject scoreResponse = getMeasureScore(measureObj,true);
 					if(scoreResponse.has("report")) {
 						addToReports((Resource) scoreResponse.get("report"),reports);
 					
@@ -879,7 +883,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						
 					}
 					
-					JSONObject scoreResponse = getMeasureScore(measureObj);
+					JSONObject scoreResponse = getMeasureScore(measureObj,true);
 					if(scoreResponse.has("report")) {
 						addToReports((Resource) scoreResponse.get("report"),reports);
 					}
@@ -907,7 +911,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						}
 						
 					}
-					JSONObject scoreResponse = getMeasureScore(measureObj);
+					JSONObject scoreResponse = getMeasureScore(measureObj,true);
 					if(scoreResponse.has("report")) {
 						addToReports((Resource) scoreResponse.get("report"),reports);
 					}
@@ -931,7 +935,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 						multiplier = 5;
 						
 					}
-					JSONObject scoreResponse = getMeasureScore(measureObj);
+					JSONObject scoreResponse = getMeasureScore(measureObj,true);
 					if(scoreResponse.has("report")) {
 						addToReports((Resource) scoreResponse.get("report"),reports);
 					}
@@ -941,13 +945,14 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //						measureScore = maxPoints;
 //					}
 					
-					System.out.println("multiplier : " + multiplier );
-					System.out.println("Measure Score * multiplier : " + measureScore);
+					System.out.println("---multiplier : " + multiplier );
+					System.out.println("---Measure Score * multiplier : " + measureScore);
 					totalScore = totalScore + measureScore;	
 				}
 				
-				
+				System.out.println("\nPI---totalScore before rounding: " + totalScore);
 				score =  totalScore * 0.25;
+				System.out.println("---totalScore after rounding: " + totalScore);
 				response.put("score",score);
 				response.put("addWeightToQI",false);
 				return response;
@@ -993,16 +998,17 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				score = 15;
 				return score;
 			}
+			System.out.println("tin doublePoints npf: "+ tin + doublePoints + npf );
+
 			if (jsonObj.has("measureList")) {
 				JSONArray measureList = new JSONArray(jsonObj.getString("measureList"));
 				double totalScore = 0;
 				for (int i = 0; i < measureList.length(); i++) {
 					JSONObject measureObj = measureList.getJSONObject(i);
-					JSONObject scoreResponse = getMeasureScore(measureObj);
-					if(scoreResponse.has("report")) {
-						addToReports((Resource) scoreResponse.get("report"),reports);
-					}
-					double measureScore = scoreResponse.getDouble("measureScore");
+//					JSONObject scoreResponse = getMeasureScore(measureObj);
+
+//		TEMP			double measureScore = scoreResponse.getDouble("measureScore");
+					double measureScore = 1;
 					double multiplier = 10;
 					double maxPoints = 40;
 					if(!measureObj.has("activityWeight") || !measureObj.has("measureName")) {
@@ -1054,11 +1060,13 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				double totalScore = 0;
 				for (int i = 0; i < measureList.length(); i++) {
 					JSONObject measureObj = measureList.getJSONObject(i);
-					JSONObject scoreResponse = getMeasureScore(measureObj);
-					if(scoreResponse.has("report")) {
-						addToReports((Resource) scoreResponse.get("report"),reports);
-					}
-					double measureScore = scoreResponse.getDouble("measureScore");
+//		TEMP			JSONObject scoreResponse = getMeasureScore(measureObj);
+//					if(scoreResponse.has("report")) {
+//						addToReports((Resource) scoreResponse.get("report"),reports);
+//					}
+//		TEMP			double measureScore = scoreResponse.getDouble("measureScore");
+
+					double measureScore = 1;
 					double multiplier = 10;
 					double maxPoints = 10;
 					String measureName = measureObj.getString("measureName");
