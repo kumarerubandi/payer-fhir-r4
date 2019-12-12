@@ -39,7 +39,15 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                                      String codePath, Iterable<Code> codes, String valueSet, String datePath,
                                      String dateLowPath, String dateHighPath, Interval dateRange)
     {
-
+//    	try {
+//    		System.out.println("In Retrieve :\n"+contextValue+"-"+dataType);
+//    		int a = 0;
+//    		int b = 1/a;
+//    	}
+//    	catch(Exception e) {
+//    		e.printStackTrace();
+//    	}
+//    	System.out.println("In Retrieve :\n"+contextValue+"-"+dataType);
         SearchParameterMap map = new SearchParameterMap();
         map.setLastUpdated(new DateRangeParam());
 
@@ -58,31 +66,49 @@ public class JpaDataProvider extends FhirDataProviderR4 {
         if (dataType == null) {
             throw new IllegalArgumentException("A data type (i.e. Procedure, Valueset, etc...) must be specified for clinical data retrieval");
         }
-
+        //System.out.println("context: "+context);
+        //System.out.println("62 : "+ map.keySet());
         if (context != null && context.equals("Patient") && contextValue != null) {
+        	//System.out.println("isPatientCompartment(dataType): "+isPatientCompartment(dataType));
             if (isPatientCompartment(dataType))
             {
                 ReferenceParam patientParam = new ReferenceParam(contextValue.toString());
-                map.add(getPatientSearchParam(dataType), patientParam);
+                //System.out.println("getPatientSearchParam(dataType): "+dataType+" -- "+getPatientSearchParam(dataType)+" "+patientParam);
+                if(dataType.equals("Procedure")) {
+                	map.add("patient", patientParam);
+                }
+                else {
+                	map.add(getPatientSearchParam(dataType), patientParam);
+                }
+            }
+            if (dataType != null) {
+                if (dataType.equals("Patient")) {
+                    map.add("_id", new ReferenceParam(contextValue.toString()));
+                }
             }
         }
-
+        //System.out.println("72 : "+ map.keySet());
         boolean noResults = false;
+        //System.out.println("codePath: "+codePath);
         if (codePath != null && !codePath.equals("")) {
-
+        	//System.out.println("valueSet: "+valueSet);
             if (valueSet != null) {
+            	//System.out.println("expandValueSets: "+expandValueSets);
                 if (expandValueSets) {
                     if (terminologyProvider == null) {
                         throw new IllegalArgumentException("Expand value sets cannot be used without a terminology provider and no terminology provider is set.");
                     }
+//                    //System.out.println("ValueSetInfo: "+new ValueSetInfo().withId(valueSet));
                     ValueSetInfo valueSetInfo = new ValueSetInfo().withId(valueSet);
                     codes = terminologyProvider.expand(valueSetInfo);
                 }
                 else {
                     map.add(convertPathToSearchParam(dataType, codePath), new TokenParam(null, valueSet).setModifier(TokenParamModifier.IN));
+                    //System.out.println("89 : "+ map.keySet());
                 }
             }
-
+            
+            //System.out.println("codes: "+codes+" "+map.keySet());
             if (codes != null) {
                 TokenOrListParam codeParams = new TokenOrListParam();
                 int codeCount = 0;
@@ -90,6 +116,9 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                     codeCount++;
                     codeParams.addOr(new TokenParam(code.getSystem(), code.getCode()));
                 }
+                //System.out.println("convertPathToSearchParam: "+convertPathToSearchParam(dataType, codePath));
+                //System.out.println("codeParams: "+codeParams);
+                //System.out.println("103 : "+ map.keySet());
                 map.add(convertPathToSearchParam(dataType, codePath), codeParams);
                 if (codeCount == 0) {
                     noResults = true;
@@ -99,12 +128,12 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                 }
             }
         }
-
+        System.out.println("123 : "+ map.keySet());
         // If the retrieve is filtered to a value set that has no codes, there are no possible satisfying results, don't even search, just return empty
         if (noResults) {
             return new ArrayList();
         }
-
+        //System.out.println("dateRange: "+dateRange);
         if (dateRange != null) {
             DateParam low = null;
             DateParam high = null;
@@ -126,12 +155,19 @@ public class JpaDataProvider extends FhirDataProviderR4 {
             else {
                 rangeParam = new DateRangeParam(low, high);
             }
-
+            //System.out.println("140 : "+ map.keySet());
             map.add(convertPathToSearchParam(dataType, datePath), rangeParam);
         }
 
         JpaResourceProviderR4<? extends IAnyResource> jpaResProvider = resolveResourceProvider(dataType);
+//        //System.out.println("MAP:");
+//        //System.out.println(map.toString()+" "+map.getCount());
+//        //System.out.println("Dao: "+jpaResProvider.getDao());
+        System.out.println("MAp elements "+dataType+" "+map.keySet());
         IBundleProvider bundleProvider = jpaResProvider.getDao().search(map);
+//        //System.out.println("Bundle: "+bundleProvider);
+//        //System.out.println("Size of Bundle"+bundleProvider.size());
+       
         if (bundleProvider.size() == null)
         {
             return resolveResourceList(bundleProvider.getResources(0, 10000));

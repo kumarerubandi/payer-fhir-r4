@@ -152,11 +152,17 @@ public class MeasureEvaluation {
         if (!pop.hasCriteria()) {
             return Collections.emptyList();
         }
-
+//        System.out.println("155 --- Patient: "+patient.getIdElement().getIdPart());
+        
         context.setContextValue("Patient", patient.getIdElement().getIdPart());
         Object result = context.resolveExpressionRef(pop.getCriteria().getExpression()).evaluate(context);
+        //logger.info("\n>>>159 Result: "+patient.getIdElement().getIdPart()+ ": "+result);
+//        System.out.println("Res: "+result);
+//        //System.out.println("Cntxt: "+context);
+//        System.out.println("-----\n");
         if (result == null) {
             Collections.emptyList();
+            return new ArrayList<Resource>();
         }
         
         if (result instanceof Boolean) {
@@ -213,7 +219,9 @@ public class MeasureEvaluation {
     ) {
         boolean inPopulation = false;
         if (criteria != null) {
+//        	System.out.println("--222 evaluateCriteria(context, patient, criteria): "+evaluateCriteria(context, patient, criteria));
             for (Resource resource : evaluateCriteria(context, patient, criteria)) {
+            	//System.out.println("---224: "+resource);
                 inPopulation = true;
                 population.put(resource.getId(), resource);
             }
@@ -223,6 +231,7 @@ public class MeasureEvaluation {
             // Are they in the exclusion?
             if (exclusionCriteria != null) {
                 for (Resource resource : evaluateCriteria(context, patient, exclusionCriteria)) {
+                	//System.out.println("---234: "+resource);
                     inPopulation = false;
                     exclusionPopulation.put(resource.getId(), resource);
                     population.remove(resource.getId());
@@ -677,14 +686,19 @@ public class MeasureEvaluation {
 
                     // For each patient in the initial population
                     for (Patient patient : patients) {
-
+//                    	if(patient.getIdElement().getIdPart().equals("4973")) {
+//                    		continue;
+//                    	}
                         // Are they in the initial population?
+                    	//logger.info("-----------------\n689 get initial population Patient: "+patient+", "+initialPopulationCriteria);
                         boolean inInitialPopulation = evaluatePopulationCriteria(context, patient, initialPopulationCriteria,
                                 initialPopulation, initialPopulationPatients, null, null, null);
                         populateResourceMap(context, MeasurePopulationType.INITIALPOPULATION, resources, codeToResourceMap);
-
+                        //logger.info("\n---695 initialPopulationPatients && initialPopulation: "+initialPopulationPatients+" , "+initialPopulation.size());
                         if (inInitialPopulation) {
                             // Are they in the denominator?
+                        	//logger.info("--696 in the initial population");
+                        	
                             boolean inDenominator = evaluatePopulationCriteria(context, patient,
                                     denominatorCriteria, denominator, denominatorPatients,
                                     denominatorExclusionCriteria, denominatorExclusion, denominatorExclusionPatients);
@@ -692,6 +706,7 @@ public class MeasureEvaluation {
 
                             if (inDenominator) {
                                 // Are they in the numerator?
+                            	//logger.info("--705 in the denominator");
                                 boolean inNumerator = evaluatePopulationCriteria(context, patient,
                                         numeratorCriteria, numerator, numeratorPatients,
                                         numeratorExclusionCriteria, numeratorExclusion, numeratorExclusionPatients);
@@ -699,6 +714,7 @@ public class MeasureEvaluation {
 
                                 if (!inNumerator && inDenominator && (denominatorExceptionCriteria != null)) {
                                     // Are they in the denominator exception?
+                                	//logger.info("--713 in the numerator");
                                     boolean inException = false;
                                     for (Resource resource : evaluateCriteria(context, patient, denominatorExceptionCriteria)) {
                                         inException = true;
@@ -707,6 +723,7 @@ public class MeasureEvaluation {
                                         populateResourceMap(context, MeasurePopulationType.DENOMINATOREXCEPTION, resources, codeToResourceMap);
                                     }
                                     if (inException) {
+                                    	//logger.info("--722  in the denominator exception?");
                                         if (denominatorExceptionPatients != null) {
                                             denominatorExceptionPatients.put(patient.getId(), patient);
                                         }
@@ -737,12 +754,14 @@ public class MeasureEvaluation {
                         populateResourceMap(context, MeasurePopulationType.INITIALPOPULATION, resources, codeToResourceMap);
 
                         if (inInitialPopulation) {
+                        	//logger.info("-- 753 inInitialPopulation ");
                             // Are they in the measure population?
                             boolean inMeasurePopulation = evaluatePopulationCriteria(context, patient,
                                     measurePopulationCriteria, measurePopulation, measurePopulationPatients,
                                     measurePopulationExclusionCriteria, measurePopulationExclusion, measurePopulationExclusionPatients);
 
                             if (inMeasurePopulation) {
+                            	//logger.info("-- 760 inMeasurePopulation");
                                 // TODO: Evaluate measure observations
                                 for (Resource resource : evaluateCriteria(context, patient, measureObservationCriteria)) {
                                     measureObservation.put(resource.getId(), resource);
