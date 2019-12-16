@@ -409,7 +409,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		return this.dataRequirementsProvider.getDataRequirements(measure, this.libraryResourceProvider);
 	}
 
-	@Operation(name = "$data-requirements-by-identfier", idempotent = true)
+	@Operation(name = "$data-requirements-by-identifier", idempotent = true)
 	public org.hl7.fhir.r4.model.Library dataRequirementsByIdentifier(@RequiredParam(name = "identifier") String theId,
 			@RequiredParam(name = "startPeriod") String startPeriod,
 			@RequiredParam(name = "endPeriod") String endPeriod) throws InternalErrorException, FHIRException {
