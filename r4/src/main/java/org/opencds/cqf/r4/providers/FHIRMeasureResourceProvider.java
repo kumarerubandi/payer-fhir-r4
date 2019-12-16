@@ -13,6 +13,8 @@ import java.util.UUID;
 
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupComponent;
+import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -60,7 +62,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 	private DataRequirementsProvider dataRequirementsProvider;
 
 	private LibraryResourceProvider libraryResourceProvider;
-
+	private FHIRValueSetResourceProvider valuesetResourceProvider;
 	private static final Logger logger = LoggerFactory.getLogger(FHIRMeasureResourceProvider.class);
 
 	public FHIRMeasureResourceProvider(JpaDataProvider dataProvider, IFhirSystemDao systemDao,
@@ -72,6 +74,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		this.narrativeProvider = narrativeProvider;
 		this.hqmfProvider = hqmfProvider;
 		this.dataRequirementsProvider = new DataRequirementsProvider();
+		this.valuesetResourceProvider = (FHIRValueSetResourceProvider) dataProvider.resolveResourceProvider("ValueSet");
 	}
 
 	@Operation(name = "$hqmf", idempotent = true)
@@ -411,6 +414,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			@RequiredParam(name = "startPeriod") String startPeriod,
 			@RequiredParam(name = "endPeriod") String endPeriod) throws InternalErrorException, FHIRException {
 		SearchParameterMap map = new SearchParameterMap();
+		Library libRes = new Library();
 		map.add("identifier", new TokenParam(theId));
 		System.out.println(theId);
 		IBundleProvider measuresFound = this.getDao().search(map);
@@ -418,11 +422,38 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			List<IBaseResource> matchedMeasures= measuresFound.getResources(0,measuresFound.size());
 			IdType measureId = new IdType(matchedMeasures.get(0).getIdElement().getIdPart());
 			System.out.println(measuresFound.size());
-			return dataRequirements(measureId,startPeriod,endPeriod);
+			libRes = dataRequirements(measureId,startPeriod,endPeriod);
+			for(DataRequirement dataReqObj : libRes.getDataRequirement()) {
+				for(DataRequirement.DataRequirementCodeFilterComponent codeFilterObj : dataReqObj.getCodeFilter()) {
+					String valuesetStr = codeFilterObj.getValueSet();
+					String codesParamString = "";
+					if(valuesetStr.contains("urn:oid:")) {
+						String[] valueSetParts = valuesetStr.split("urn:oid:");
+						SearchParameterMap valueSetMap = new SearchParameterMap();
+						String valueSetStr = valueSetParts[1];
+						valueSetMap.add("identifier", new TokenParam(valueSetStr));
+						System.out.println(valueSetStr);
+						IBundleProvider valuesetsFound = this.valuesetResourceProvider.getDao().search(valueSetMap);
+			
+						for(IBaseResource valuesetRes : valuesetsFound.getResources(0, valuesetsFound.size())) {
+							ValueSet valuesetResObj = (ValueSet)valuesetRes;
+							for(ConceptSetComponent conceptSet: valuesetResObj.getCompose().getInclude()) {
+								for(ConceptReferenceComponent conceptRef : conceptSet.getConcept()) {
+									codesParamString=codesParamString+conceptRef.getCode()+",";
+								}
+							}
+						}
+//						this.valuesetResourceProvider.getDao().search(theParams)
+					}
+					codesParamString = codesParamString.substring(0,codesParamString.length()-1);
+					codeFilterObj.setValueSet(codesParamString);
+				}
+			}
+//			return 
 		}
 		
 //		Measure measure = this.getDao().read(theId);
-		Library libRes = new Library();
+		
 		return libRes;
 //		return this.dataRequirementsProvider.getDataRequirements(measure, this.libraryResourceProvider);
 	}
@@ -736,8 +767,9 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				if(totalScore > maxScore) {
 					totalScore = maxScore;
 				}
-				score = totalScore * weightage;
+//				score = (totalScore/(60+totalBonus)) * 45;
 //				response.put("score", score);
+				score = totalScore * weightage;
 				System.out.println("QI Score  : "+score);
 			}
 			
@@ -1037,7 +1069,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
 //            	      System.out.println("---------------");
 				}
-				score =  totalScore * 0.15;
+				score =  (totalScore/40) * 15;
 				
 			}
 		}
@@ -1084,8 +1116,9 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 //            	      System.out.println(measureReport.getGroup().get(0).getMeasureScore().getValue());
 //            	      System.out.println("---------------");
 				}
-				
+				System.out.println("Total Before weightage: "+totalScore);
 				score =  totalScore * 0.15;
+				System.out.println("Total After weightage: "+score);
 				return score;
 			}
 		}
