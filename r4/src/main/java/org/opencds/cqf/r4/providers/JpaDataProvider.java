@@ -46,6 +46,7 @@ public class JpaDataProvider extends FhirDataProviderR4 {
 //    	}
 //    	catch(Exception e) {
 //    		e.printStackTrace();
+////    		throw(e);
 //    	}
 //    	System.out.println("In Retrieve :\n"+contextValue+"-"+dataType);
         SearchParameterMap map = new SearchParameterMap();
@@ -104,7 +105,7 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                 }
                 else {
                     map.add(convertPathToSearchParam(dataType, codePath), new TokenParam(null, valueSet).setModifier(TokenParamModifier.IN));
-                    //System.out.println("89 : "+ map.keySet());
+                    System.out.println("89 : "+ map.keySet() + ",  "+map.values());
                 }
             }
             
@@ -114,12 +115,13 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                 int codeCount = 0;
                 for (Code code : codes) {
                     codeCount++;
-                    codeParams.addOr(new TokenParam(code.getSystem(), code.getCode()));
+                    codeParams.addOr(new TokenParam(null, code.getCode()));
                 }
                 //System.out.println("convertPathToSearchParam: "+convertPathToSearchParam(dataType, codePath));
                 //System.out.println("codeParams: "+codeParams);
                 //System.out.println("103 : "+ map.keySet());
                 map.add(convertPathToSearchParam(dataType, codePath), codeParams);
+//                System.out.println("124 : "+ map.keySet() + ",  "+map.values());
                 if (codeCount == 0) {
                     noResults = true;
                 }
@@ -128,7 +130,7 @@ public class JpaDataProvider extends FhirDataProviderR4 {
                 }
             }
         }
-        System.out.println("123 : "+ map.keySet());
+        System.out.println("133 : "+ map.keySet());
         // If the retrieve is filtered to a value set that has no codes, there are no possible satisfying results, don't even search, just return empty
         if (noResults) {
             return new ArrayList();
