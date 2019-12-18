@@ -425,28 +425,31 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			libRes = dataRequirements(measureId,startPeriod,endPeriod);
 			for(DataRequirement dataReqObj : libRes.getDataRequirement()) {
 				for(DataRequirement.DataRequirementCodeFilterComponent codeFilterObj : dataReqObj.getCodeFilter()) {
-					String valuesetStr = codeFilterObj.getValueSet();
-					String codesParamString = "";
-					if(valuesetStr.contains("urn:oid:")) {
-						String[] valueSetParts = valuesetStr.split("urn:oid:");
-						SearchParameterMap valueSetMap = new SearchParameterMap();
-						String valueSetStr = valueSetParts[1];
-						valueSetMap.add("identifier", new TokenParam(valueSetStr));
-						System.out.println(valueSetStr);
-						IBundleProvider valuesetsFound = this.valuesetResourceProvider.getDao().search(valueSetMap);
-			
-						for(IBaseResource valuesetRes : valuesetsFound.getResources(0, valuesetsFound.size())) {
-							ValueSet valuesetResObj = (ValueSet)valuesetRes;
-							for(ConceptSetComponent conceptSet: valuesetResObj.getCompose().getInclude()) {
-								for(ConceptReferenceComponent conceptRef : conceptSet.getConcept()) {
-									codesParamString=codesParamString+conceptRef.getCode()+",";
+					if( codeFilterObj.getValueSet() != null) {
+						String valuesetStr = codeFilterObj.getValueSet();
+						System.out.println("\nVlaueset :"+valuesetStr);
+						String codesParamString = "";
+						if(valuesetStr.contains("urn:oid:")) {
+							String[] valueSetParts = valuesetStr.split("urn:oid:");
+							SearchParameterMap valueSetMap = new SearchParameterMap();
+							String valueSetStr = valueSetParts[1];
+							valueSetMap.add("identifier", new TokenParam(valueSetStr));
+							System.out.println(valueSetStr);
+							IBundleProvider valuesetsFound = this.valuesetResourceProvider.getDao().search(valueSetMap);
+				
+							for(IBaseResource valuesetRes : valuesetsFound.getResources(0, valuesetsFound.size())) {
+								ValueSet valuesetResObj = (ValueSet)valuesetRes;
+								for(ConceptSetComponent conceptSet: valuesetResObj.getCompose().getInclude()) {
+									for(ConceptReferenceComponent conceptRef : conceptSet.getConcept()) {
+										codesParamString=codesParamString+conceptRef.getCode()+",";
+									}
 								}
 							}
+	//						this.valuesetResourceProvider.getDao().search(theParams)
 						}
-//						this.valuesetResourceProvider.getDao().search(theParams)
+						codesParamString = codesParamString.substring(0,codesParamString.length()-1);
+						codeFilterObj.setValueSet(codesParamString);
 					}
-					codesParamString = codesParamString.substring(0,codesParamString.length()-1);
-					codeFilterObj.setValueSet(codesParamString);
 				}
 			}
 //			return 
