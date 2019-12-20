@@ -423,9 +423,13 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			IdType measureId = new IdType(matchedMeasures.get(0).getIdElement().getIdPart());
 			System.out.println(measuresFound.size());
 			libRes = dataRequirements(measureId,startPeriod,endPeriod);
+			List<DataRequirement> dataReqList = new ArrayList<DataRequirement>();
 			for(DataRequirement dataReqObj : libRes.getDataRequirement()) {
+				String resType = dataReqObj.getType();
 				for(DataRequirement.DataRequirementCodeFilterComponent codeFilterObj : dataReqObj.getCodeFilter()) {
+					
 					if( codeFilterObj.getValueSet() != null) {
+						String searchKey = codeFilterObj.getPath();
 						String valuesetStr = codeFilterObj.getValueSet();
 						System.out.println("\nVlaueset :"+valuesetStr);
 						String codesParamString = "";
@@ -442,15 +446,50 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 								for(ConceptSetComponent conceptSet: valuesetResObj.getCompose().getInclude()) {
 									for(ConceptReferenceComponent conceptRef : conceptSet.getConcept()) {
 										codesParamString=codesParamString+conceptRef.getCode()+",";
+										
 									}
 								}
 							}
 	//						this.valuesetResourceProvider.getDao().search(theParams)
 						}
 						codesParamString = codesParamString.substring(0,codesParamString.length()-1);
+						int loopLength = codesParamString.length() ;
+						
+						if(loopLength > 1800) {
+							int beg = 0;
+							int splitBegin = 0;
+							int indexLimit = beg+1800;
+							while(indexLimit < loopLength) {
+								DataRequirement newDataReq = new DataRequirement();
+								newDataReq.setType(resType);
+								DataRequirement.DataRequirementCodeFilterComponent newCodeFilter = new DataRequirement.DataRequirementCodeFilterComponent();
+//								System.out.println("\n Beg: "+ beg +" " +indexLimit);
+								int comaIndex = codesParamString.substring(beg, indexLimit).lastIndexOf(",")+beg;
+//								System.out.println("\n splitBegin At "+splitBegin+" "+ comaIndex+" ");
+								String codeStringPart = codesParamString.substring(splitBegin, comaIndex);
+//								System.out.println("\n "+dataReqObj.getType()+" codePart: "+codeStringPart);
+								newCodeFilter.setPath(searchKey);
+								newCodeFilter.setValueSet(codeStringPart);
+								List<DataRequirement.DataRequirementCodeFilterComponent> codeFilterList = new ArrayList<DataRequirement.DataRequirementCodeFilterComponent>();
+								codeFilterList.add(newCodeFilter);
+								newDataReq.setCodeFilter(codeFilterList);
+								dataReqList.add(newDataReq);
+								splitBegin = comaIndex+1;
+								beg =indexLimit+1;
+								indexLimit = beg+1800;
+							}
+							if(indexLimit > loopLength) {
+								codesParamString = codesParamString.substring(indexLimit-1802, loopLength-1);
+//								System.out.println("\n "+dataReqObj.getType()+" codePart: "+codeStringPart);
+							}
+						}
+						
 						codeFilterObj.setValueSet(codesParamString);
 					}
 				}
+			}
+			for(DataRequirement dataReqObj : dataReqList) {
+				libRes.addDataRequirement(dataReqObj);
 			}
 //			return 
 		}
