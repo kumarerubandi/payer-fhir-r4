@@ -221,7 +221,9 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			@RequiredParam(name = "periodEnd") String periodEnd, @RequiredParam(name = "topic") String topic,
 			@RequiredParam(name = "patient") String patientRef) {
 		List<IBaseResource> measures = getDao().search(new SearchParameterMap().add("topic",
-				new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
+				new TokenParam().setValue(topic))).getResources(0, 1000);
+//				new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
+
 		Bundle careGapReport = new Bundle();
 		careGapReport.setType(Bundle.BundleType.DOCUMENT);
 
@@ -237,6 +239,9 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		List<MeasureReport> reports = new ArrayList<>();
 		MeasureReport report;
 		for (IBaseResource resource : measures) {
+			System.out.println("-----\n-----");
+			System.out.println(resource.getIdElement().getIdPart());
+			
 			Composition.SectionComponent section = new Composition.SectionComponent();
 
 			Measure measure = (Measure) resource;
@@ -261,7 +266,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 			MeasureEvaluation evaluator = new MeasureEvaluation(seed.getDataProvider(), seed.getMeasurementPeriod());
 			// TODO - this is configured for patient-level evaluation only
 			report = evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), patientRef);
-
+			System.out.println("HASSCORING && HASGROUP "+report.hasGroup()  + " "+ measure.hasScoring());
 			if (report.hasGroup() && measure.hasScoring()) {
 				int numerator = 0;
 				int denominator = 0;
@@ -289,6 +294,7 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 				}
 
 				double proportion = 0.0;
+				
 				if (measure.getScoring().hasCoding() && denominator != 0) {
 					for (Coding coding : measure.getScoring().getCoding()) {
 						if (coding.hasCode() && coding.getCode().equals("proportion")) {
@@ -299,8 +305,10 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 
 				// TODO - this is super hacky ... change once improvementNotation is specified
 				// as a code
+				System.out.println("=====================");
+				System.out.println(improvementNotation.getCodingFirstRep().getCode().toLowerCase()+"--"+proportion);
 				if (improvementNotation.getCodingFirstRep().getCode().toLowerCase().equals("increase")) {
-					if (proportion < 1.0) {
+					if (proportion <= 1.0) {
 						composition.addSection(section);
 						reports.add(report);
 					}
