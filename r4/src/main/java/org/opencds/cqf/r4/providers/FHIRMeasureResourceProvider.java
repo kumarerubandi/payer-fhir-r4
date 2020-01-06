@@ -49,7 +49,11 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.TokenParamModifier;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 
 public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
@@ -215,14 +219,27 @@ public class FHIRMeasureResourceProvider extends MeasureResourceProvider {
 		MeasureEvaluation evaluator = new MeasureEvaluation(bundleProvider, seed.getMeasurementPeriod());
 		return evaluator.evaluatePatientMeasure(seed.getMeasure(), seed.getContext(), "");
 	}
-
+	
+	public static String encode(String url)  
+    {  
+              try {  
+                   String encodeURL=URLEncoder.encode( url, "UTF-8" );  
+                   return encodeURL;  
+              } catch (UnsupportedEncodingException e) {  
+                   return "Issue while encoding" +e.getMessage();  
+              }  
+    }
+	
 	@Operation(name = "$care-gaps", idempotent = true)
 	public Bundle careGapsReport(@RequiredParam(name = "periodStart") String periodStart,
 			@RequiredParam(name = "periodEnd") String periodEnd, @RequiredParam(name = "topic") String topic,
 			@RequiredParam(name = "patient") String patientRef) {
+		
+		System.out.println("-----Topic-----");
+		System.out.println(topic);
 		List<IBaseResource> measures = getDao().search(new SearchParameterMap().add("topic",
-				new TokenParam().setValue(topic))).getResources(0, 1000);
-//				new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
+//				new TokenParam().setValue(topic))).getResources(0, 1000);
+				new TokenParam().setModifier(TokenParamModifier.TEXT).setValue(topic))).getResources(0, 1000);
 
 		Bundle careGapReport = new Bundle();
 		careGapReport.setType(Bundle.BundleType.DOCUMENT);
