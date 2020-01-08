@@ -52,7 +52,9 @@ public class JpaTerminologyProvider implements TerminologyProvider {
             if (valueSet.getVersion() != null || (valueSet.getCodeSystems() != null && valueSet.getCodeSystems().size() > 0)) {
                 throw new UnsupportedOperationException(String.format("Could not expand value set %s; version and code system bindings are not supported at this time.", valueSet.getId()));
             }
+            System.out.println("1: "+ValueSet.SP_URL);
             IBundleProvider bundleProvider = valueSetResourceProvider.getDao().search(new SearchParameterMap().add(ValueSet.SP_URL, new UriParam(valueSet.getId())));
+            System.out.println("2: "+valueSet.getId());
             List<IBaseResource> valueSets = bundleProvider.getResources(0, bundleProvider.size());
             if (valueSets.isEmpty()) {
                 throw new IllegalArgumentException(String.format("Could not resolve value set %s.", valueSet.getId()));
