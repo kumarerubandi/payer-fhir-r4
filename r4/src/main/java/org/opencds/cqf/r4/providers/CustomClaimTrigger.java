@@ -148,6 +148,8 @@ public class CustomClaimTrigger extends ClaimResourceProvider {
             throws RuntimeException {
 
         ClaimResponse retVal = new ClaimResponse();
+        retVal.setStatus(ClaimResponse.ClaimResponseStatus.DRAFT);
+        retVal.setOutcome(ClaimResponse.RemittanceOutcome.QUEUED);
         Bundle collectionBundle = new Bundle().setType(Bundle.BundleType.COLLECTION);
         // retVal.setId(new IdType("ClaimResponse",
         // "31e6e675-3ecd-4360-9e40-ec7d145fa96d", "1"));
@@ -162,6 +164,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider {
         String patientIdentifier = "";
         String claimIdentifier = "";
         Claim claim = new Claim();
+        String str_result = "";
         for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
             collectionBundle.addEntry(entry);
             System.out.println("ResType : " + entry.getResource().getResourceType());
@@ -264,6 +267,8 @@ public class CustomClaimTrigger extends ClaimResourceProvider {
                                 + "</Payload> </ns2:COREEnvelopeRealTimeRequest> </soap:Body> </soap:Envelope>\n";
                         // POST call for submitting the x12 in xml format
                         URL soap_url = new URL("https://api-gateway.linkhealth.com/davinci/x12/priorauth");
+//                         soap_url = new URL("http://cdex.mettles.com:5000/xmlx12");
+
                         byte[] soap_postDataBytes = soap_xml.getBytes("UTF-8");
                         HttpURLConnection soap_conn = (HttpURLConnection) soap_url.openConnection();
                         soap_conn.setRequestMethod("POST");
@@ -279,7 +284,7 @@ public class CustomClaimTrigger extends ClaimResourceProvider {
                         while ((str = soap_in.readLine()) != null) {
                             sb1.append(str);
                         }
-                        String str_result = sb1.toString();
+                        str_result = sb1.toString();
 			System.out.println("\n  >>> Str Res:"+str_result);
                         if (str_result.contains("HCR*A1")) {
                             retVal.setStatus(ClaimResponse.ClaimResponseStatus.ACTIVE);
@@ -332,7 +337,11 @@ public class CustomClaimTrigger extends ClaimResourceProvider {
                 // retVal.setProcessNote(theProcessNote);
 
             }
-            // } catch (Exception e) {
+        }
+	    catch (Exception ex) {
+	        ex.printStackTrace();
+	    }
+	    try {            // } catch (Exception e) {
             // e.printStackTrace();
 
             // }
